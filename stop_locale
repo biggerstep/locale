@@ -1,0 +1,39 @@
+#!/bin/bash
+# stop_locale - Stop Locale development servers
+
+# Colors for output
+RED='\033[0;31m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+echo -e "${BLUE}Stopping Locale development servers...${NC}\n"
+
+# Stop API server
+if [ -f /tmp/locale_api.pid ]; then
+    API_PID=$(cat /tmp/locale_api.pid)
+    if kill -0 $API_PID 2>/dev/null; then
+        kill $API_PID
+        echo -e "${RED}✓ Stopped API server (PID: $API_PID)${NC}"
+    else
+        echo "  API server not running"
+    fi
+    rm /tmp/locale_api.pid
+else
+    echo "  No API server PID file found"
+fi
+
+# Stop React server
+if [ -f /tmp/locale_react.pid ]; then
+    REACT_PID=$(cat /tmp/locale_react.pid)
+    if kill -0 $REACT_PID 2>/dev/null; then
+        kill $REACT_PID
+        echo -e "${RED}✓ Stopped React server (PID: $REACT_PID)${NC}"
+    else
+        echo "  React server not running"
+    fi
+    rm /tmp/locale_react.pid
+else
+    echo "  No React server PID file found"
+fi
+
+echo -e "\n${BLUE}All servers stopped.${NC}\n"

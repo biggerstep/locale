@@ -91,6 +91,38 @@ cd locale-app
 npm start
 ```
 
+## Development Utilities
+
+**Quick Start (Recommended)**
+
+Use the included utility scripts to start/stop both servers:
+
+```bash
+# Start both API and React dev servers
+./start_locale
+
+# Stop both servers
+./stop_locale
+```
+
+The `start_locale` script will:
+- Start Flask API server on port 5001
+- Start React dev server on port 3000
+- Run both in the background
+- Enable auto-reload on file changes
+
+**Debugging**
+
+Server logs are written to:
+- API logs: `/tmp/locale_api.log`
+- React logs: `/tmp/locale_react.log`
+
+View logs in real-time:
+```bash
+tail -f /tmp/locale_api.log    # Watch API logs
+tail -f /tmp/locale_react.log  # Watch React logs
+```
+
 ### 4. Test the App
 
 1. Start backend: `python3 api_server.py`

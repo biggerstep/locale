@@ -1,0 +1,45 @@
+#!/bin/bash
+# dev_locale - Start Locale API server and React dev server
+
+# Colors for output
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+echo -e "${BLUE}Starting Locale development servers...${NC}\n"
+
+# Get the directory where this script lives
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+# Start Flask API server
+echo -e "${GREEN}[1/2] Starting Flask API server on port 5001...${NC}"
+source venv/bin/activate
+python3 api_server.py > /tmp/locale_api.log 2>&1 &
+API_PID=$!
+echo $API_PID > /tmp/locale_api.pid
+echo "  ✓ API server running (PID: $API_PID)"
+echo "    Logs: /tmp/locale_api.log"
+
+# Give Flask a moment to start
+sleep 2
+
+# Start React dev server
+echo -e "\n${GREEN}[2/2] Starting React dev server on port 3000...${NC}"
+cd locale-app
+npm start > /tmp/locale_react.log 2>&1 &
+REACT_PID=$!
+echo $REACT_PID > /tmp/locale_react.pid
+echo "  ✓ React server running (PID: $REACT_PID)"
+echo "    Logs: /tmp/locale_react.log"
+
+echo -e "\n${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${GREEN}✓ Development servers started!${NC}\n"
+echo "  API:   http://localhost:5001"
+echo "  React: http://localhost:3000"
+echo ""
+echo "To stop servers, run: ./stop_locale"
+echo "To view logs:"
+echo "  API:   tail -f /tmp/locale_api.log"
+echo "  React: tail -f /tmp/locale_react.log"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"

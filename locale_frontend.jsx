@@ -486,6 +486,7 @@ function LocationMap({ center, amenities }) {
     'grocery_stores': '#10B981',    // green
     'restaurants': '#EF4444',       // red
     'coffee_shops': '#8B4513',      // brown
+    'bars': '#9333EA',              // purple
     'breweries': '#F59E0B',         // amber
     'pharmacies': '#EC4899',        // pink
     'gyms': '#6366F1',              // indigo
@@ -500,6 +501,7 @@ function LocationMap({ center, amenities }) {
     'grocery_stores': '🛒',
     'restaurants': '🍽️',
     'coffee_shops': '☕',
+    'bars': '🍸',
     'breweries': '🍺',
     'pharmacies': '💊',
     'gyms': '💪',

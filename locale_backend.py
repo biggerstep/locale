@@ -24,7 +24,8 @@ CRITERIA_MAP = {
     'grocery_stores': 'grocery_store',
     'restaurants': 'restaurant',
     'coffee_shops': 'cafe',
-    'breweries': 'bar',  # Includes breweries, taprooms, and brewpubs
+    'bars': 'bar',
+    'breweries': 'brewery',
     'pharmacies': 'pharmacy',
     'gyms': 'gym',
     'parks': 'park',

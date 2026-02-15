@@ -200,6 +200,14 @@ export default function App() {
               </p>
             </div>
 
+            {/* Map Section */}
+            <div className="mb-8">
+              <LocationMap
+                center={report.coordinates}
+                amenities={report.amenities}
+              />
+            </div>
+
             {/* Climate Section */}
             <div className="mb-8">
               <h3 className="text-lg font-semibold text-gray-900 mb-3">Climate</h3>
@@ -280,6 +288,9 @@ function ExpandableAmenityRow({ label, data, isExpanded, onToggle }) {
 
       {isExpanded && places.length > 0 && (
         <div className="px-4 pb-3 pt-1 bg-gray-50 border-t border-gray-200">
+          {count > 5 && (
+            <div className="text-xs font-medium text-gray-600 mb-2 pt-2">Nearest 5</div>
+          )}
           <div className="space-y-2">
             {places.map((place, idx) => (
               <div key={idx} className="flex justify-between items-center py-2 text-sm">
@@ -307,6 +318,155 @@ function ExpandableAmenityRow({ label, data, isExpanded, onToggle }) {
           No places found
         </div>
       )}
+    </div>
+  );
+}
+
+function LocationMap({ center, amenities }) {
+  const mapRef = React.useRef(null);
+  const mapInstanceRef = React.useRef(null);
+  const [isLoaded, setIsLoaded] = React.useState(false);
+  const [apiKey, setApiKey] = React.useState(null);
+
+  // Color map for different amenity types
+  const categoryColors = {
+    'grocery_stores': '#10B981',    // green
+    'restaurants': '#EF4444',       // red
+    'coffee_shops': '#8B4513',      // brown
+    'breweries': '#F59E0B',         // amber
+    'pharmacies': '#EC4899',        // pink
+    'gyms': '#6366F1',              // indigo
+    'parks': '#22C55E',             // lime green
+    'schools': '#3B82F6',           // blue
+    'hospitals': '#DC2626',         // dark red
+    'gas_stations': '#FBBF24',      // yellow
+  };
+
+  // Fetch API key
+  useEffect(() => {
+    fetch(`${API_BASE}/config`)
+      .then(res => res.json())
+      .then(data => setApiKey(data.mapsApiKey))
+      .catch(err => console.error('Failed to load Maps API key:', err));
+  }, []);
+
+  // Load Google Maps API
+  useEffect(() => {
+    if (!apiKey) return;
+
+    if (window.google && window.google.maps) {
+      setIsLoaded(true);
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}`;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => setIsLoaded(true);
+    document.head.appendChild(script);
+  }, [apiKey]);
+
+  // Initialize map and markers
+  useEffect(() => {
+    if (!isLoaded || !mapRef.current || !center) return;
+
+    const map = new window.google.maps.Map(mapRef.current, {
+      center: { lat: center.lat, lng: center.lng },
+      zoom: 13,
+      mapTypeControl: false,
+      streetViewControl: false,
+    });
+
+    mapInstanceRef.current = map;
+
+    // Add center marker (location)
+    new window.google.maps.Marker({
+      position: { lat: center.lat, lng: center.lng },
+      map: map,
+      title: 'Search Location',
+      icon: {
+        path: window.google.maps.SymbolPath.CIRCLE,
+        scale: 10,
+        fillColor: '#3B82F6',
+        fillOpacity: 1,
+        strokeColor: '#ffffff',
+        strokeWeight: 2,
+      },
+    });
+
+    // Collect all place coordinates for bounds
+    const bounds = new window.google.maps.LatLngBounds();
+    bounds.extend({ lat: center.lat, lng: center.lng });
+
+    // Add markers for all amenities
+    Object.entries(amenities).forEach(([category, data]) => {
+      const color = categoryColors[category] || '#9CA3AF'; // default gray
+      data.places?.forEach(place => {
+        if (place.lat && place.lng) {
+          new window.google.maps.Marker({
+            position: { lat: place.lat, lng: place.lng },
+            map: map,
+            title: place.name,
+            icon: {
+              path: window.google.maps.SymbolPath.CIRCLE,
+              scale: 6,
+              fillColor: color,
+              fillOpacity: 0.8,
+              strokeColor: '#ffffff',
+              strokeWeight: 1,
+            },
+          });
+          bounds.extend({ lat: place.lat, lng: place.lng });
+        }
+      });
+    });
+
+    // Fit map to show all markers
+    map.fitBounds(bounds);
+
+    // Ensure minimum zoom level
+    const listener = window.google.maps.event.addListener(map, 'idle', () => {
+      if (map.getZoom() > 15) map.setZoom(15);
+      window.google.maps.event.removeListener(listener);
+    });
+  }, [isLoaded, center, amenities]);
+
+  if (!isLoaded) {
+    return (
+      <div className="w-full h-96 bg-gray-100 rounded-lg flex items-center justify-center">
+        <div className="text-gray-500">Loading map...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div ref={mapRef} className="w-full h-96 rounded-lg border border-gray-200" />
+
+      {/* Legend */}
+      <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+        <div className="flex flex-wrap gap-4">
+          {/* Center location */}
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-full bg-blue-500 border-2 border-white shadow"></div>
+            <span className="text-sm text-gray-700">Search Location</span>
+          </div>
+
+          {/* Amenity categories that exist in data */}
+          {Object.keys(amenities).map(category => (
+            <div key={category} className="flex items-center gap-2">
+              <div
+                className="w-3 h-3 rounded-full border border-white shadow"
+                style={{ backgroundColor: categoryColors[category] || '#9CA3AF' }}
+              ></div>
+              <span className="text-sm text-gray-700">
+                {category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

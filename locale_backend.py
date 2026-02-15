@@ -115,7 +115,9 @@ def count_nearby_places(lat: float, lng: float, place_type: str,
                 detailed_places.append({
                     'name': place.get('displayName', {}).get('text', 'Unknown'),
                     'distance': distance,
-                    'url': place.get('googleMapsUri', '')
+                    'url': place.get('googleMapsUri', ''),
+                    'lat': place_lat,
+                    'lng': place_lng
                 })
 
         # Sort by distance (closest first) and limit to 5

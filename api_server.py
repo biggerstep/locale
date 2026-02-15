@@ -4,7 +4,7 @@ Provides REST endpoints for location evaluation
 """
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from locale_backend import evaluate_location, CRITERIA_MAP
+from locale_backend import evaluate_location, CRITERIA_MAP, GOOGLE_API_KEY
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for frontend requests
@@ -14,6 +14,12 @@ CORS(app)  # Enable CORS for frontend requests
 def health_check():
     """Health check endpoint"""
     return jsonify({'status': 'ok'})
+
+
+@app.route('/api/config', methods=['GET'])
+def get_config():
+    """Get configuration including Maps API key for frontend"""
+    return jsonify({'mapsApiKey': GOOGLE_API_KEY})
 
 
 @app.route('/api/criteria', methods=['GET'])

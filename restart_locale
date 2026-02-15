@@ -1,0 +1,79 @@
+#!/bin/bash
+# restart_locale - Restart Locale development servers
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+echo -e "${BLUE}Restarting Locale development servers...${NC}\n"
+
+# Get the directory where this script lives
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+# ===== STOP PHASE =====
+echo -e "${BLUE}[1/3] Stopping existing servers...${NC}"
+
+# Stop API server
+if [ -f /tmp/locale_api.pid ]; then
+    API_PID=$(cat /tmp/locale_api.pid)
+    if kill -0 $API_PID 2>/dev/null; then
+        kill $API_PID
+        echo -e "  ${RED}✓ Stopped API server (PID: $API_PID)${NC}"
+    else
+        echo "    No API server running"
+    fi
+    rm /tmp/locale_api.pid
+else
+    echo "    No API server PID file found"
+fi
+
+# Stop React server
+if [ -f /tmp/locale_react.pid ]; then
+    REACT_PID=$(cat /tmp/locale_react.pid)
+    if kill -0 $REACT_PID 2>/dev/null; then
+        kill $REACT_PID
+        echo -e "  ${RED}✓ Stopped React server (PID: $REACT_PID)${NC}"
+    else
+        echo "    No React server running"
+    fi
+    rm /tmp/locale_react.pid
+else
+    echo "    No React server PID file found"
+fi
+
+# Give processes time to terminate
+sleep 1
+
+# ===== START PHASE =====
+echo -e "\n${BLUE}[2/3] Starting Flask API server on port 5001...${NC}"
+source venv/bin/activate
+python3 api_server.py > /tmp/locale_api.log 2>&1 &
+API_PID=$!
+echo $API_PID > /tmp/locale_api.pid
+echo -e "  ${GREEN}✓ API server running (PID: $API_PID)${NC}"
+echo "    Logs: /tmp/locale_api.log"
+
+# Give Flask a moment to start
+sleep 2
+
+echo -e "\n${BLUE}[3/3] Starting React dev server on port 3000...${NC}"
+cd locale-app
+npm start > /tmp/locale_react.log 2>&1 &
+REACT_PID=$!
+echo $REACT_PID > /tmp/locale_react.pid
+echo -e "  ${GREEN}✓ React server running (PID: $REACT_PID)${NC}"
+echo "    Logs: /tmp/locale_react.log"
+
+echo -e "\n${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${GREEN}✓ Development servers restarted!${NC}\n"
+echo "  API:   http://localhost:5001"
+echo "  React: http://localhost:3000"
+echo ""
+echo "To stop servers, run: ./stop_locale"
+echo "To view logs:"
+echo "  API:   tail -f /tmp/locale_api.log"
+echo "  React: tail -f /tmp/locale_react.log"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"

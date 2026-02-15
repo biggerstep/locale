@@ -342,6 +342,20 @@ function LocationMap({ center, amenities }) {
     'gas_stations': '#FBBF24',      // yellow
   };
 
+  // Icons for different amenity types
+  const categoryIcons = {
+    'grocery_stores': '🛒',
+    'restaurants': '🍽️',
+    'coffee_shops': '☕',
+    'breweries': '🍺',
+    'pharmacies': '💊',
+    'gyms': '💪',
+    'parks': '🌳',
+    'schools': '🏫',
+    'hospitals': '🏥',
+    'gas_stations': '⛽',
+  };
+
   // Fetch API key
   useEffect(() => {
     fetch(`${API_BASE}/config`)
@@ -376,6 +390,17 @@ function LocationMap({ center, amenities }) {
       zoom: 13,
       mapTypeControl: false,
       streetViewControl: false,
+      styles: [
+        {
+          featureType: 'poi',
+          elementType: 'labels',
+          stylers: [{ visibility: 'off' }]
+        },
+        {
+          featureType: 'poi.business',
+          stylers: [{ visibility: 'off' }]
+        }
+      ]
     });
 
     mapInstanceRef.current = map;
@@ -401,22 +426,46 @@ function LocationMap({ center, amenities }) {
 
     // Add markers for all amenities
     Object.entries(amenities).forEach(([category, data]) => {
-      const color = categoryColors[category] || '#9CA3AF'; // default gray
+      const icon = categoryIcons[category] || '📍';
+      const categoryLabel = category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
       data.places?.forEach(place => {
         if (place.lat && place.lng) {
-          new window.google.maps.Marker({
+          // Create emoji marker icon
+          const svgIcon = {
+            url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+                <text x="16" y="24" font-size="24" text-anchor="middle">${icon}</text>
+              </svg>
+            `)}`,
+            scaledSize: new window.google.maps.Size(32, 32),
+            anchor: new window.google.maps.Point(16, 16),
+          };
+
+          const marker = new window.google.maps.Marker({
             position: { lat: place.lat, lng: place.lng },
             map: map,
             title: place.name,
-            icon: {
-              path: window.google.maps.SymbolPath.CIRCLE,
-              scale: 6,
-              fillColor: color,
-              fillOpacity: 0.8,
-              strokeColor: '#ffffff',
-              strokeWeight: 1,
-            },
+            icon: svgIcon,
           });
+
+          // Create InfoWindow with amenity info
+          const infoWindow = new window.google.maps.InfoWindow({
+            content: `
+              <div style="padding: 8px; min-width: 200px;">
+                <div style="font-size: 18px; margin-bottom: 4px;">${icon} <strong>${place.name}</strong></div>
+                <div style="color: #666; font-size: 13px; margin-bottom: 4px;">${categoryLabel}</div>
+                <div style="color: #999; font-size: 12px;">${place.distance} mi away</div>
+                ${place.url ? `<a href="${place.url}" target="_blank" rel="noopener noreferrer" style="color: #3B82F6; font-size: 12px; margin-top: 6px; display: inline-block;">View on Google Maps →</a>` : ''}
+              </div>
+            `
+          });
+
+          // Open InfoWindow on marker click
+          marker.addListener('click', () => {
+            infoWindow.open(map, marker);
+          });
+
           bounds.extend({ lat: place.lat, lng: place.lng });
         }
       });

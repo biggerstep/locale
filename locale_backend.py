@@ -23,7 +23,7 @@ CRITERIA_MAP = {
     'grocery_stores': 'grocery_store',
     'restaurants': 'restaurant',
     'coffee_shops': 'cafe',
-    'breweries': 'brewery',  # Note: might need 'bar' as fallback
+    'breweries': 'bar',  # Includes breweries, taprooms, and brewpubs
     'pharmacies': 'pharmacy',
     'gyms': 'gym',
     'parks': 'park',

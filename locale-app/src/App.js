@@ -431,14 +431,15 @@ function LocationMap({ center, amenities }) {
 
       data.places?.forEach(place => {
         if (place.lat && place.lng) {
-          // Create emoji marker icon
+          // Create emoji marker icon with label
           const svgIcon = {
             url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
-              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+              <svg xmlns="http://www.w3.org/2000/svg" width="200" height="32" viewBox="0 0 200 32">
                 <text x="16" y="24" font-size="24" text-anchor="middle">${icon}</text>
+                <text x="38" y="20" font-size="12" font-family="Arial, sans-serif" fill="#333" font-weight="500">${place.name}</text>
               </svg>
             `)}`,
-            scaledSize: new window.google.maps.Size(32, 32),
+            scaledSize: new window.google.maps.Size(200, 32),
             anchor: new window.google.maps.Point(16, 16),
           };
 

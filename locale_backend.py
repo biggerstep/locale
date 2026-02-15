@@ -117,8 +117,9 @@ def count_nearby_places(lat: float, lng: float, place_type: str,
                     'distance': distance
                 })
 
-        # Sort by distance (closest first)
+        # Sort by distance (closest first) and limit to 5
         detailed_places.sort(key=lambda x: x['distance'])
+        detailed_places = detailed_places[:5]
 
         return {
             'count': len(places),

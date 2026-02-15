@@ -6,7 +6,7 @@ const API_BASE = window.location.hostname === 'localhost'
   : `http://${window.location.hostname}:5001/api`;
 
 export default function App() {
-  const [location, setLocation] = useState('');
+  const [location, setLocation] = useState('8920 River Landing Way, Atlanta, GA 30350'); // TODO: Remove default for production
   const [radius, setRadius] = useState('3');
   const [availableCriteria, setAvailableCriteria] = useState([]);
   const [selectedCriteria, setSelectedCriteria] = useState(new Set());
@@ -15,6 +15,7 @@ export default function App() {
   const [report, setReport] = useState(null);
   const [error, setError] = useState(null);
   const [expandedAmenities, setExpandedAmenities] = useState(new Set());
+  const [expandedSections, setExpandedSections] = useState(new Set(['amenities', 'climate'])); // Start with both expanded
 
   // Load available criteria on mount
   useEffect(() => {
@@ -82,6 +83,16 @@ export default function App() {
       newExpanded.add(key);
     }
     setExpandedAmenities(newExpanded);
+  };
+
+  const toggleSection = (section) => {
+    const newExpanded = new Set(expandedSections);
+    if (newExpanded.has(section)) {
+      newExpanded.delete(section);
+    } else {
+      newExpanded.add(section);
+    }
+    setExpandedSections(newExpanded);
   };
 
   const updateCustomAmenity = (index, value) => {
@@ -276,33 +287,63 @@ export default function App() {
               </p>
             </div>
 
-            {/* Climate Section */}
-            <div className="mb-8">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Climate</h3>
-              <div className="space-y-3">
-                <ClimateMetricRow label="Average Temperature" value={report.climate.avg_temp_f} type="temperature" />
-                <ClimateMetricRow label="Annual Precipitation" value={report.climate.annual_precipitation} type="precipitation" />
-                <ClimateMetricRow label="Sunny Days" value={report.climate.sunny_days} type="sunny" />
-              </div>
-            </div>
-
             {/* Amenities Section */}
             {Object.keys(report.amenities).length > 0 && (
               <div className="mb-8">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Amenities</h3>
-                <div className="space-y-2">
-                  {Object.entries(report.amenities).map(([key, data]) => (
-                    <ExpandableAmenityRow
-                      key={key}
-                      label={key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                      data={data}
-                      isExpanded={expandedAmenities.has(key)}
-                      onToggle={() => toggleAmenity(key)}
-                    />
-                  ))}
-                </div>
+                <button
+                  onClick={() => toggleSection('amenities')}
+                  className="w-full flex justify-between items-center mb-3 hover:opacity-70 transition"
+                >
+                  <h3 className="text-lg font-semibold text-gray-900">Amenity Details</h3>
+                  <svg
+                    className={`w-6 h-6 text-gray-600 transition-transform ${expandedSections.has('amenities') ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {expandedSections.has('amenities') && (
+                  <div className="space-y-2">
+                    {Object.entries(report.amenities).map(([key, data]) => (
+                      <ExpandableAmenityRow
+                        key={key}
+                        label={key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        data={data}
+                        isExpanded={expandedAmenities.has(key)}
+                        onToggle={() => toggleAmenity(key)}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             )}
+
+            {/* Climate Section */}
+            <div className="mb-8">
+              <button
+                onClick={() => toggleSection('climate')}
+                className="w-full flex justify-between items-center mb-3 hover:opacity-70 transition"
+              >
+                <h3 className="text-lg font-semibold text-gray-900">Climate</h3>
+                <svg
+                  className={`w-6 h-6 text-gray-600 transition-transform ${expandedSections.has('climate') ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {expandedSections.has('climate') && (
+                <div className="space-y-3">
+                  <ClimateMetricRow label="Average Temperature" value={report.climate.avg_temp_f} type="temperature" />
+                  <ClimateMetricRow label="Annual Precipitation" value={report.climate.annual_precipitation} type="precipitation" />
+                  <ClimateMetricRow label="Sunny Days" value={report.climate.sunny_days} type="sunny" />
+                </div>
+              )}
+            </div>
 
             {/* Transportation Section */}
             <div>
@@ -577,18 +618,19 @@ function LocationMap({ center, amenities }) {
 
     mapInstanceRef.current = map;
 
-    // Add center marker (location)
+    // Add center marker (location) - yellow star
     new window.google.maps.Marker({
       position: { lat: center.lat, lng: center.lng },
       map: map,
       title: 'Search Location',
       icon: {
-        path: window.google.maps.SymbolPath.CIRCLE,
-        scale: 10,
-        fillColor: '#3B82F6',
-        fillOpacity: 1,
-        strokeColor: '#ffffff',
-        strokeWeight: 2,
+        url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+            <text x="16" y="24" font-size="28" text-anchor="middle">⭐</text>
+          </svg>
+        `)}`,
+        scaledSize: new window.google.maps.Size(32, 32),
+        anchor: new window.google.maps.Point(16, 16),
       },
     });
 
@@ -672,17 +714,14 @@ function LocationMap({ center, amenities }) {
         <div className="flex flex-wrap gap-4">
           {/* Center location */}
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded-full bg-blue-500 border-2 border-white shadow"></div>
+            <span className="text-lg">⭐</span>
             <span className="text-sm text-gray-700">Search Location</span>
           </div>
 
           {/* Amenity categories that exist in data */}
           {Object.keys(amenities).map(category => (
             <div key={category} className="flex items-center gap-2">
-              <div
-                className="w-3 h-3 rounded-full border border-white shadow"
-                style={{ backgroundColor: categoryColors[category] || '#9CA3AF' }}
-              ></div>
+              <span className="text-lg">{categoryIcons[category] || '📍'}</span>
               <span className="text-sm text-gray-700">
                 {category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
               </span>

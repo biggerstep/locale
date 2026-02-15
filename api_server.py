@@ -57,8 +57,9 @@ def evaluate():
     radius_miles = float(data.get('radius_miles', 3))
     selected_criteria = data.get('criteria')  # None = all criteria
     custom_amenities = data.get('custom_amenities', [])  # Custom place types
+    restaurant_min_rating = float(data.get('restaurant_min_rating', 0))  # Minimum rating for restaurants
 
-    result = evaluate_location(location, radius_miles, selected_criteria, custom_amenities)
+    result = evaluate_location(location, radius_miles, selected_criteria, custom_amenities, restaurant_min_rating)
     
     if 'error' in result:
         return jsonify(result), 404

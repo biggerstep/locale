@@ -16,6 +16,7 @@ export default function App() {
   const [error, setError] = useState(null);
   const [expandedAmenities, setExpandedAmenities] = useState(new Set());
   const [expandedSections, setExpandedSections] = useState(new Set(['amenities', 'climate'])); // Start with both expanded
+  const [restaurantMinRating, setRestaurantMinRating] = useState('3'); // Minimum rating for restaurants
 
   // Load available criteria on mount
   useEffect(() => {
@@ -65,6 +66,15 @@ export default function App() {
     localStorage.setItem('customAmenities', JSON.stringify(customAmenities));
   }, [customAmenities]);
 
+  // Auto-refresh when radius changes (if we already have a report)
+  useEffect(() => {
+    if (report && location) {
+      // Trigger a new search with the updated radius
+      performSearch();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [radius]);
+
   const toggleCriterion = (key) => {
     const newSelected = new Set(selectedCriteria);
     if (newSelected.has(key)) {
@@ -101,8 +111,7 @@ export default function App() {
     setCustomAmenities(newCustom);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const performSearch = async () => {
     setLoading(true);
     setError(null);
     setReport(null);
@@ -118,7 +127,8 @@ export default function App() {
           location,
           radius_miles: parseFloat(radius),
           criteria: Array.from(selectedCriteria),
-          custom_amenities: filledCustom
+          custom_amenities: filledCustom,
+          restaurant_min_rating: 0  // Always fetch all restaurants, filter on frontend
         })
       });
 
@@ -134,6 +144,11 @@ export default function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    await performSearch();
   };
 
   return (
@@ -178,9 +193,23 @@ export default function App() {
               // Show selected standard amenities + always show custom amenities
               const standardCriteria = new Set(availableCriteria.map(c => c.key));
               const filteredAmenities = Object.fromEntries(
-                Object.entries(report.amenities).filter(([key]) =>
-                  selectedCriteria.has(key) || !standardCriteria.has(key)
-                )
+                Object.entries(report.amenities)
+                  .filter(([key]) =>
+                    selectedCriteria.has(key) || !standardCriteria.has(key)
+                  )
+                  .map(([key, data]) => {
+                    // Also filter restaurant places by rating
+                    if (key === 'restaurants') {
+                      const minRating = parseFloat(restaurantMinRating);
+                      const filteredPlaces = data.places.filter(place => {
+                        if (minRating === 0) return true;
+                        if (typeof place.rating !== 'number') return false;
+                        return place.rating >= minRating;
+                      });
+                      return [key, { ...data, places: filteredPlaces }];
+                    }
+                    return [key, data];
+                  })
               );
 
               return (
@@ -218,18 +247,36 @@ export default function App() {
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {availableCriteria.map(criterion => (
-                  <label
+                  <div
                     key={criterion.key}
-                    className="flex items-center space-x-2 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition"
+                    className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition"
                   >
-                    <input
-                      type="checkbox"
-                      checked={selectedCriteria.has(criterion.key)}
-                      onChange={() => toggleCriterion(criterion.key)}
-                      className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                    />
-                    <span className="text-sm text-gray-700">{criterion.label}</span>
-                  </label>
+                    <label className="flex items-center space-x-2 cursor-pointer flex-1">
+                      <input
+                        type="checkbox"
+                        checked={selectedCriteria.has(criterion.key)}
+                        onChange={() => toggleCriterion(criterion.key)}
+                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700">{criterion.label}</span>
+                    </label>
+                    {criterion.key === 'restaurants' && (
+                      <select
+                        value={restaurantMinRating}
+                        onChange={(e) => setRestaurantMinRating(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="ml-2 px-2 py-1 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                        title="Minimum rating"
+                      >
+                        <option value="0">Any ⭐</option>
+                        <option value="1">1+ ⭐</option>
+                        <option value="2">2+ ⭐</option>
+                        <option value="3">3+ ⭐</option>
+                        <option value="4">4+ ⭐</option>
+                        <option value="5">5 ⭐</option>
+                      </select>
+                    )}
+                  </div>
                 ))}
               </div>
               <p className="text-xs text-gray-500 mt-2">
@@ -306,15 +353,36 @@ export default function App() {
                 </button>
                 {expandedSections.has('amenities') && (
                   <div className="space-y-2">
-                    {Object.entries(report.amenities).map(([key, data]) => (
-                      <ExpandableAmenityRow
-                        key={key}
-                        label={key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                        data={data}
-                        isExpanded={expandedAmenities.has(key)}
-                        onToggle={() => toggleAmenity(key)}
-                      />
-                    ))}
+                    {Object.entries(report.amenities).map(([key, data]) => {
+                      // Filter restaurants by minimum rating on the frontend
+                      let filteredData = data;
+                      if (key === 'restaurants') {
+                        const minRating = parseFloat(restaurantMinRating);
+                        // Filter restaurants by minimum rating
+                        const filteredPlaces = data.places.filter(place => {
+                          if (minRating === 0) return true;
+                          if (typeof place.rating !== 'number') return false;
+                          return place.rating >= minRating;
+                        });
+
+                        filteredData = {
+                          count: filteredPlaces.length,
+                          places: filteredPlaces.slice(0, 5)  // Show top 5 closest that qualify
+                        };
+                      }
+
+                      const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+                      return (
+                        <ExpandableAmenityRow
+                          key={key}
+                          label={label}
+                          data={filteredData}
+                          isExpanded={expandedAmenities.has(key)}
+                          onToggle={() => toggleAmenity(key)}
+                        />
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -505,18 +573,25 @@ function ExpandableAmenityRow({ label, data, isExpanded, onToggle }) {
           <div className="space-y-2">
             {places.map((place, idx) => (
               <div key={idx} className="flex justify-between items-center py-2 text-sm">
-                {place.url ? (
-                  <a
-                    href={place.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-800 hover:underline"
-                  >
-                    {place.name}
-                  </a>
-                ) : (
-                  <span className="text-gray-700">{place.name}</span>
-                )}
+                <div className="flex items-center gap-2">
+                  {place.url ? (
+                    <a
+                      href={place.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800 hover:underline"
+                    >
+                      {place.name}
+                    </a>
+                  ) : (
+                    <span className="text-gray-700">{place.name}</span>
+                  )}
+                  {place.rating && (
+                    <span className="text-yellow-600 text-xs">
+                      ⭐ {place.rating.toFixed(1)}
+                    </span>
+                  )}
+                </div>
                 <span className="text-gray-500 font-medium">{place.distance} mi</span>
               </div>
             ))}

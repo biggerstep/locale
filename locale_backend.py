@@ -99,9 +99,12 @@ def count_nearby_places(lat: float, lng: float, place_type: str,
 
         places = data.get('places', [])
 
-        # Filter by primary type (types[0]) to avoid misclassification
-        # e.g., gas stations with coffee won't show up as coffee shops
-        places = [p for p in places if p.get('types', []) and p['types'][0] == place_type]
+        # Filter by primary type for coffee shops to avoid misclassification (gas stations)
+        # For other types, just check if type is anywhere in the list
+        if place_type == 'cafe':
+            places = [p for p in places if p.get('types', []) and p['types'][0] == place_type]
+        else:
+            places = [p for p in places if place_type in p.get('types', [])]
 
         # Filter by rating if specified (for restaurants)
         if place_type == 'restaurant' and min_rating:
@@ -122,14 +125,19 @@ def count_nearby_places(lat: float, lng: float, place_type: str,
                 detailed_places.append({
                     'name': place.get('displayName', {}).get('text', 'Unknown'),
                     'distance': distance,
+                    'rating': place.get('rating'),
                     'url': place.get('googleMapsUri', ''),
                     'lat': place_lat,
                     'lng': place_lng
                 })
 
-        # Sort by distance (closest first) and limit to 5
+        # Sort by distance (closest first)
         detailed_places.sort(key=lambda x: x['distance'])
-        detailed_places = detailed_places[:5]
+
+        # For restaurants, return all places for frontend filtering
+        # For other amenities, limit to 5
+        if place_type != 'restaurant':
+            detailed_places = detailed_places[:5]
 
         return {
             'count': len(places),
@@ -192,6 +200,7 @@ def search_by_text(lat: float, lng: float, query: str, radius_meters: int) -> di
                     detailed_places.append({
                         'name': place.get('displayName', {}).get('text', 'Unknown'),
                         'distance': distance,
+                        'rating': place.get('rating'),
                         'url': place.get('googleMapsUri', ''),
                         'lat': place_lat,
                         'lng': place_lng
@@ -310,7 +319,8 @@ def find_nearest_airport(lat: float, lng: float, radius_meters: int = 50000) -> 
 
 def evaluate_location(location: str, radius_miles: float,
                      selected_criteria: Optional[List[str]] = None,
-                     custom_amenities: Optional[List[str]] = None) -> Dict:
+                     custom_amenities: Optional[List[str]] = None,
+                     restaurant_min_rating: float = 0) -> Dict:
     """
     Main function to evaluate a location
 
@@ -319,6 +329,7 @@ def evaluate_location(location: str, radius_miles: float,
         radius_miles: Search radius in miles
         selected_criteria: List of criteria keys to evaluate (defaults to all)
         custom_amenities: List of custom place types to search for
+        restaurant_min_rating: Minimum rating for restaurants (0-5, default 0 for all)
 
     Returns:
         Dictionary with location evaluation data
@@ -341,9 +352,9 @@ def evaluate_location(location: str, radius_miles: float,
     for criterion in selected_criteria:
         if criterion in CRITERIA_MAP:
             place_type = CRITERIA_MAP[criterion]
-            # Special handling for restaurants (4+ stars)
-            if criterion == 'restaurants':
-                result = count_nearby_places(lat, lng, place_type, radius_meters, min_rating=4.0)
+            # Special handling for restaurants with configurable minimum rating
+            if criterion == 'restaurants' and restaurant_min_rating > 0:
+                result = count_nearby_places(lat, lng, place_type, radius_meters, min_rating=restaurant_min_rating)
             else:
                 result = count_nearby_places(lat, lng, place_type, radius_meters)
             amenities[criterion] = result

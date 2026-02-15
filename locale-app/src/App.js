@@ -162,14 +162,25 @@ export default function App() {
             </div>
 
             {/* Map Section - shown after first evaluation */}
-            {report && (
-              <div>
-                <LocationMap
-                  center={report.coordinates}
-                  amenities={report.amenities}
-                />
-              </div>
-            )}
+            {report && (() => {
+              // Filter amenities based on selected criteria
+              // Show selected standard amenities + always show custom amenities
+              const standardCriteria = new Set(availableCriteria.map(c => c.key));
+              const filteredAmenities = Object.fromEntries(
+                Object.entries(report.amenities).filter(([key]) =>
+                  selectedCriteria.has(key) || !standardCriteria.has(key)
+                )
+              );
+
+              return (
+                <div>
+                  <LocationMap
+                    center={report.coordinates}
+                    amenities={filteredAmenities}
+                  />
+                </div>
+              );
+            })()}
 
             <div>
               <label htmlFor="radius" className="block text-sm font-medium text-gray-700 mb-2">

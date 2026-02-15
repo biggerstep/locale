@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 
-const API_BASE = 'http://10.0.0.203:5001/api';
+// Use relative URL if on same host, otherwise use configured IP
+const API_BASE = window.location.hostname === 'localhost'
+  ? 'http://localhost:5001/api'
+  : `http://${window.location.hostname}:5001/api`;
 
 export default function App() {
   const [location, setLocation] = useState('');
@@ -138,20 +141,39 @@ export default function App() {
               <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">
                 Location
               </label>
-              <input
-                id="location"
-                type="text"
-                placeholder="e.g., 1234 Main St, Austin, TX or Portland, OR"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                required
-              />
+              <div className="flex gap-2">
+                <input
+                  id="location"
+                  type="text"
+                  placeholder="e.g., 1234 Main St, Austin, TX or Portland, OR"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition"
+                  required
+                />
+                <button
+                  type="submit"
+                  disabled={!location || (selectedCriteria.size === 0 && customAmenities.every(a => !a.trim())) || loading}
+                  className="bg-green-600 text-white py-3 px-8 rounded-lg font-medium hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition whitespace-nowrap"
+                >
+                  {loading ? '...' : 'Go'}
+                </button>
+              </div>
             </div>
+
+            {/* Map Section - shown after first evaluation */}
+            {report && (
+              <div>
+                <LocationMap
+                  center={report.coordinates}
+                  amenities={report.amenities}
+                />
+              </div>
+            )}
 
             <div>
               <label htmlFor="radius" className="block text-sm font-medium text-gray-700 mb-2">
-                Search Radius
+                Default Search Radius
               </label>
               <select
                 id="radius"
@@ -214,14 +236,6 @@ export default function App() {
                 ))}
               </div>
             </div>
-
-            <button
-              type="submit"
-              disabled={!location || (selectedCriteria.size === 0 && customAmenities.every(a => !a.trim())) || loading}
-              className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition"
-            >
-              {loading ? 'Evaluating...' : 'Evaluate Location'}
-            </button>
           </form>
         </div>
 
@@ -249,14 +263,6 @@ export default function App() {
               <p className="text-sm text-gray-600">
                 Within {report.radius_miles} miles • {report.coordinates.lat.toFixed(4)}°, {report.coordinates.lng.toFixed(4)}°
               </p>
-            </div>
-
-            {/* Map Section */}
-            <div className="mb-8">
-              <LocationMap
-                center={report.coordinates}
-                amenities={report.amenities}
-              />
             </div>
 
             {/* Climate Section */}

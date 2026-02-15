@@ -70,7 +70,7 @@ def count_nearby_places(lat: float, lng: float, place_type: str,
     headers = {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': GOOGLE_API_KEY,
-        'X-Goog-FieldMask': 'places.displayName,places.rating,places.location,places.googleMapsUri'
+        'X-Goog-FieldMask': 'places.displayName,places.rating,places.location,places.types,places.googleMapsUri'
     }
 
     body = {
@@ -98,6 +98,10 @@ def count_nearby_places(lat: float, lng: float, place_type: str,
         data = response.json()
 
         places = data.get('places', [])
+
+        # Filter by primary type (types[0]) to avoid misclassification
+        # e.g., gas stations with coffee won't show up as coffee shops
+        places = [p for p in places if p.get('types', []) and p['types'][0] == place_type]
 
         # Filter by rating if specified (for restaurants)
         if place_type == 'restaurant' and min_rating:
@@ -145,7 +149,7 @@ def search_by_text(lat: float, lng: float, query: str, radius_meters: int) -> di
     headers = {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': GOOGLE_API_KEY,
-        'X-Goog-FieldMask': 'places.displayName,places.rating,places.location,places.googleMapsUri'
+        'X-Goog-FieldMask': 'places.displayName,places.rating,places.location,places.types,places.googleMapsUri'
     }
 
     body = {

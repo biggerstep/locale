@@ -68,7 +68,7 @@ def count_nearby_places(lat: float, lng: float, place_type: str,
     headers = {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': GOOGLE_API_KEY,
-        'X-Goog-FieldMask': 'places.displayName,places.rating,places.location'
+        'X-Goog-FieldMask': 'places.displayName,places.rating,places.location,places.googleMapsUri'
     }
 
     body = {
@@ -114,7 +114,8 @@ def count_nearby_places(lat: float, lng: float, place_type: str,
 
                 detailed_places.append({
                     'name': place.get('displayName', {}).get('text', 'Unknown'),
-                    'distance': distance
+                    'distance': distance,
+                    'url': place.get('googleMapsUri', '')
                 })
 
         # Sort by distance (closest first) and limit to 5
@@ -181,8 +182,8 @@ def get_climate_data(lat: float, lng: float) -> Dict:
         }
 
 
-def find_nearest_airport(lat: float, lng: float, radius_meters: int = 80000) -> Dict:
-    """Find nearest airport within radius (default ~50 miles)"""
+def find_nearest_airport(lat: float, lng: float, radius_meters: int = 50000) -> Dict:
+    """Find nearest airport (searches within ~31 miles - Google API max)"""
     headers = {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': GOOGLE_API_KEY,

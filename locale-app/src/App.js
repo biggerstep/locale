@@ -18,11 +18,29 @@ export default function App() {
       .then(res => res.json())
       .then(data => {
         setAvailableCriteria(data.criteria);
-        // Select all by default
-        setSelectedCriteria(new Set(data.criteria.map(c => c.key)));
+
+        // Load from localStorage or select all by default
+        const savedCriteria = localStorage.getItem('selectedCriteria');
+        if (savedCriteria) {
+          try {
+            const parsed = JSON.parse(savedCriteria);
+            setSelectedCriteria(new Set(parsed));
+          } catch (e) {
+            setSelectedCriteria(new Set(data.criteria.map(c => c.key)));
+          }
+        } else {
+          setSelectedCriteria(new Set(data.criteria.map(c => c.key)));
+        }
       })
       .catch(err => console.error('Failed to load criteria:', err));
   }, []);
+
+  // Save selected criteria to localStorage whenever it changes
+  useEffect(() => {
+    if (selectedCriteria.size > 0) {
+      localStorage.setItem('selectedCriteria', JSON.stringify(Array.from(selectedCriteria)));
+    }
+  }, [selectedCriteria]);
 
   const toggleCriterion = (key) => {
     const newSelected = new Set(selectedCriteria);
@@ -123,7 +141,7 @@ export default function App() {
             {/* Criteria Selection */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
-                Select Criteria to Evaluate
+                Select amenities to evaluate
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {availableCriteria.map(criterion => (
@@ -265,7 +283,18 @@ function ExpandableAmenityRow({ label, data, isExpanded, onToggle }) {
           <div className="space-y-2">
             {places.map((place, idx) => (
               <div key={idx} className="flex justify-between items-center py-2 text-sm">
-                <span className="text-gray-700">{place.name}</span>
+                {place.url ? (
+                  <a
+                    href={place.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 hover:underline"
+                  >
+                    {place.name}
+                  </a>
+                ) : (
+                  <span className="text-gray-700">{place.name}</span>
+                )}
                 <span className="text-gray-500 font-medium">{place.distance} mi</span>
               </div>
             ))}

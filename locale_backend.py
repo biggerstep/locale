@@ -58,18 +58,19 @@ def geocode_location(location: str) -> Optional[Dict]:
         return None
 
 
-def count_nearby_places(lat: float, lng: float, place_type: str, 
-                       radius_meters: int, min_rating: float = 4.0) -> int:
+def count_nearby_places(lat: float, lng: float, place_type: str,
+                       radius_meters: int, min_rating: float = 4.0) -> dict:
     """
-    Count places of a given type within radius using Google Places API (New)
+    Get places of a given type within radius using Google Places API (New)
+    Returns count and detailed list with names and distances
     Uses POST request as required by new API
     """
     headers = {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': GOOGLE_API_KEY,
-        'X-Goog-FieldMask': 'places.displayName,places.rating'
+        'X-Goog-FieldMask': 'places.displayName,places.rating,places.location'
     }
-    
+
     body = {
         'includedTypes': [place_type],
         'maxResultCount': 20,  # API limit per request
@@ -83,26 +84,49 @@ def count_nearby_places(lat: float, lng: float, place_type: str,
             }
         }
     }
-    
+
     # Add rating filter for restaurants
     if place_type == 'restaurant' and min_rating:
         body['rankPreference'] = 'POPULARITY'
-    
+
     try:
         response = requests.post(PLACES_API_BASE, headers=headers, json=body)
         response.raise_for_status()
         data = response.json()
-        
+
         places = data.get('places', [])
-        
+
         # Filter by rating if specified (for restaurants)
         if place_type == 'restaurant' and min_rating:
             places = [p for p in places if p.get('rating', 0) >= min_rating]
-        
-        return len(places)
+
+        # Calculate distances and build detailed list
+        detailed_places = []
+        for place in places:
+            place_lat = place.get('location', {}).get('latitude')
+            place_lng = place.get('location', {}).get('longitude')
+
+            if place_lat and place_lng:
+                # Calculate distance using Haversine formula approximation
+                lat_diff = abs(lat - place_lat) * 69  # ~69 miles per degree lat
+                lng_diff = abs(lng - place_lng) * 54.6  # ~54.6 miles per degree lng
+                distance = round((lat_diff**2 + lng_diff**2)**0.5, 2)
+
+                detailed_places.append({
+                    'name': place.get('displayName', {}).get('text', 'Unknown'),
+                    'distance': distance
+                })
+
+        # Sort by distance (closest first)
+        detailed_places.sort(key=lambda x: x['distance'])
+
+        return {
+            'count': len(places),
+            'places': detailed_places
+        }
     except Exception as e:
         print(f"Places API error for {place_type}: {e}")
-        return 0
+        return {'count': 0, 'places': []}
 
 
 def get_climate_data(lat: float, lng: float) -> Dict:
@@ -229,17 +253,17 @@ def evaluate_location(location: str, radius_miles: float,
     if selected_criteria is None:
         selected_criteria = list(CRITERIA_MAP.keys())
     
-    # Gather amenity counts
+    # Gather amenity data (counts and details)
     amenities = {}
     for criterion in selected_criteria:
         if criterion in CRITERIA_MAP:
             place_type = CRITERIA_MAP[criterion]
             # Special handling for restaurants (4+ stars)
             if criterion == 'restaurants':
-                count = count_nearby_places(lat, lng, place_type, radius_meters, min_rating=4.0)
+                result = count_nearby_places(lat, lng, place_type, radius_meters, min_rating=4.0)
             else:
-                count = count_nearby_places(lat, lng, place_type, radius_meters)
-            amenities[criterion] = count
+                result = count_nearby_places(lat, lng, place_type, radius_meters)
+            amenities[criterion] = result
     
     # Get climate data
     climate = get_climate_data(lat, lng)

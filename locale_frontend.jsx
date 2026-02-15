@@ -10,6 +10,7 @@ export default function LocaleApp() {
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState(null);
   const [error, setError] = useState(null);
+  const [expandedAmenities, setExpandedAmenities] = useState(new Set());
 
   // Load available criteria on mount
   useEffect(() => {
@@ -31,6 +32,16 @@ export default function LocaleApp() {
       newSelected.add(key);
     }
     setSelectedCriteria(newSelected);
+  };
+
+  const toggleAmenity = (key) => {
+    const newExpanded = new Set(expandedAmenities);
+    if (newExpanded.has(key)) {
+      newExpanded.delete(key);
+    } else {
+      newExpanded.add(key);
+    }
+    setExpandedAmenities(newExpanded);
   };
 
   const handleSubmit = async (e) => {
@@ -185,12 +196,14 @@ export default function LocaleApp() {
             {Object.keys(report.amenities).length > 0 && (
               <div className="mb-8">
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Amenities</h3>
-                <div className="space-y-3">
-                  {Object.entries(report.amenities).map(([key, value]) => (
-                    <MetricRow
+                <div className="space-y-2">
+                  {Object.entries(report.amenities).map(([key, data]) => (
+                    <ExpandableAmenityRow
                       key={key}
                       label={key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                      value={value}
+                      data={data}
+                      isExpanded={expandedAmenities.has(key)}
+                      onToggle={() => toggleAmenity(key)}
                     />
                   ))}
                 </div>
@@ -219,6 +232,52 @@ function MetricRow({ label, value }) {
     <div className="flex justify-between items-center py-3 border-b border-gray-100 last:border-b-0">
       <span className="text-gray-600">{label}</span>
       <span className="font-medium text-gray-900">{value}</span>
+    </div>
+  );
+}
+
+function ExpandableAmenityRow({ label, data, isExpanded, onToggle }) {
+  const count = data.count || 0;
+  const places = data.places || [];
+
+  return (
+    <div className="border border-gray-200 rounded-lg">
+      <button
+        onClick={onToggle}
+        className="w-full flex justify-between items-center py-3 px-4 hover:bg-gray-50 transition"
+      >
+        <span className="text-gray-600">{label}</span>
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-gray-900">{count}</span>
+          <svg
+            className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+      </button>
+
+      {isExpanded && places.length > 0 && (
+        <div className="px-4 pb-3 pt-1 bg-gray-50 border-t border-gray-200">
+          <div className="space-y-2">
+            {places.map((place, idx) => (
+              <div key={idx} className="flex justify-between items-center py-2 text-sm">
+                <span className="text-gray-700">{place.name}</span>
+                <span className="text-gray-500 font-medium">{place.distance} mi</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {isExpanded && places.length === 0 && (
+        <div className="px-4 pb-3 pt-1 bg-gray-50 border-t border-gray-200 text-sm text-gray-500">
+          No places found
+        </div>
+      )}
     </div>
   );
 }

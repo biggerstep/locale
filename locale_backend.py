@@ -134,11 +134,8 @@ def count_nearby_places(lat: float, lng: float, place_type: str,
         # Sort by distance (closest first)
         detailed_places.sort(key=lambda x: x['distance'])
 
-        # For restaurants, return all places for frontend filtering
-        # For other amenities, limit to 5
-        if place_type != 'restaurant':
-            detailed_places = detailed_places[:5]
-
+        # Return all places (up to API limit of 20)
+        # Frontend will display them in a scrollable list
         return {
             'count': len(places),
             'places': detailed_places

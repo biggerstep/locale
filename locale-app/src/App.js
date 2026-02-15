@@ -75,6 +75,15 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [radius]);
 
+  // Auto-refresh when selected amenities change (if we already have a report)
+  useEffect(() => {
+    if (report && location) {
+      // Trigger a new search with the updated amenities
+      performSearch();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCriteria]);
+
   const toggleCriterion = (key) => {
     const newSelected = new Set(selectedCriteria);
     if (newSelected.has(key)) {
@@ -215,6 +224,7 @@ export default function App() {
               return (
                 <div>
                   <LocationMap
+                    key={`map-${Array.from(selectedCriteria).sort().join(',')}-${restaurantMinRating}`}
                     center={report.coordinates}
                     amenities={filteredAmenities}
                   />
@@ -367,7 +377,7 @@ export default function App() {
 
                         filteredData = {
                           count: filteredPlaces.length,
-                          places: filteredPlaces.slice(0, 5)  // Show top 5 closest that qualify
+                          places: filteredPlaces  // Show all filtered results (scrollable)
                         };
                       }
 
@@ -567,10 +577,7 @@ function ExpandableAmenityRow({ label, data, isExpanded, onToggle }) {
 
       {isExpanded && places.length > 0 && (
         <div className="px-4 pb-3 pt-1 bg-gray-50 border-t border-gray-200">
-          {count > 5 && (
-            <div className="text-xs font-medium text-gray-600 mb-2 pt-2">Nearest 5</div>
-          )}
-          <div className="space-y-2">
+          <div className="space-y-2 max-h-[250px] overflow-y-auto">
             {places.map((place, idx) => (
               <div key={idx} className="flex justify-between items-center py-2 text-sm">
                 <div className="flex items-center gap-2">

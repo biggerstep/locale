@@ -427,16 +427,17 @@ function LocationMap({ center, amenities }) {
     // Add markers for all amenities
     Object.entries(amenities).forEach(([category, data]) => {
       const icon = categoryIcons[category] || '📍';
+      const color = categoryColors[category] || '#9CA3AF';
       const categoryLabel = category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
       data.places?.forEach(place => {
         if (place.lat && place.lng) {
-          // Create emoji marker icon with label
+          // Create emoji marker icon with color-coded label
           const svgIcon = {
             url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
               <svg xmlns="http://www.w3.org/2000/svg" width="200" height="32" viewBox="0 0 200 32">
                 <text x="16" y="24" font-size="24" text-anchor="middle">${icon}</text>
-                <text x="38" y="20" font-size="12" font-family="Arial, sans-serif" fill="#333" font-weight="500">${place.name}</text>
+                <text x="38" y="20" font-size="12" font-family="Arial, sans-serif" fill="${color}" font-weight="600" stroke="#ffffff" stroke-width="3" paint-order="stroke">${place.name}</text>
               </svg>
             `)}`,
             scaledSize: new window.google.maps.Size(200, 32),

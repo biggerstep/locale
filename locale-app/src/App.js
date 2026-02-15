@@ -7,6 +7,7 @@ export default function App() {
   const [radius, setRadius] = useState('3');
   const [availableCriteria, setAvailableCriteria] = useState([]);
   const [selectedCriteria, setSelectedCriteria] = useState(new Set());
+  const [customAmenities, setCustomAmenities] = useState(['', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState(null);
   const [error, setError] = useState(null);
@@ -42,6 +43,24 @@ export default function App() {
     }
   }, [selectedCriteria]);
 
+  // Load custom amenities from localStorage on mount
+  useEffect(() => {
+    const savedCustom = localStorage.getItem('customAmenities');
+    if (savedCustom) {
+      try {
+        const parsed = JSON.parse(savedCustom);
+        setCustomAmenities(parsed);
+      } catch (e) {
+        // Keep default empty array
+      }
+    }
+  }, []);
+
+  // Save custom amenities to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('customAmenities', JSON.stringify(customAmenities));
+  }, [customAmenities]);
+
   const toggleCriterion = (key) => {
     const newSelected = new Set(selectedCriteria);
     if (newSelected.has(key)) {
@@ -62,11 +81,20 @@ export default function App() {
     setExpandedAmenities(newExpanded);
   };
 
+  const updateCustomAmenity = (index, value) => {
+    const newCustom = [...customAmenities];
+    newCustom[index] = value;
+    setCustomAmenities(newCustom);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
     setReport(null);
+
+    // Filter out empty custom amenities
+    const filledCustom = customAmenities.filter(a => a.trim() !== '');
 
     try {
       const response = await fetch(`${API_BASE}/evaluate`, {
@@ -75,7 +103,8 @@ export default function App() {
         body: JSON.stringify({
           location,
           radius_miles: parseFloat(radius),
-          criteria: Array.from(selectedCriteria)
+          criteria: Array.from(selectedCriteria),
+          custom_amenities: filledCustom
         })
       });
 
@@ -164,9 +193,31 @@ export default function App() {
               </p>
             </div>
 
+            {/* Custom Amenities */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Custom Amenities (Optional)
+              </label>
+              <p className="text-xs text-gray-600 mb-3">
+                Enter up to 5 business names or search terms (e.g., Starbucks, Whole Foods, library, museum)
+              </p>
+              <div className="space-y-2">
+                {customAmenities.map((amenity, index) => (
+                  <input
+                    key={index}
+                    type="text"
+                    placeholder={index === 0 ? 'e.g., Starbucks' : index === 1 ? 'e.g., Whole Foods' : `Custom amenity ${index + 1}`}
+                    value={amenity}
+                    onChange={(e) => updateCustomAmenity(index, e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm"
+                  />
+                ))}
+              </div>
+            </div>
+
             <button
               type="submit"
-              disabled={!location || selectedCriteria.size === 0 || loading}
+              disabled={!location || (selectedCriteria.size === 0 && customAmenities.every(a => !a.trim())) || loading}
               className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition"
             >
               {loading ? 'Evaluating...' : 'Evaluate Location'}

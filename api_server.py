@@ -56,8 +56,9 @@ def evaluate():
     location = data['location']
     radius_miles = float(data.get('radius_miles', 3))
     selected_criteria = data.get('criteria')  # None = all criteria
-    
-    result = evaluate_location(location, radius_miles, selected_criteria)
+    custom_amenities = data.get('custom_amenities', [])  # Custom place types
+
+    result = evaluate_location(location, radius_miles, selected_criteria, custom_amenities)
     
     if 'error' in result:
         return jsonify(result), 404

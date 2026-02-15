@@ -15,6 +15,7 @@ load_dotenv()
 # Configuration
 GOOGLE_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY', 'YOUR_API_KEY_HERE')
 PLACES_API_BASE = 'https://places.googleapis.com/v1/places:searchNearby'
+TEXT_SEARCH_API_BASE = 'https://places.googleapis.com/v1/places:searchText'
 GEOCODING_API_BASE = 'https://maps.googleapis.com/maps/api/geocode/json'
 METEO_API_BASE = 'https://archive-api.open-meteo.com/v1/archive'
 
@@ -74,6 +75,7 @@ def count_nearby_places(lat: float, lng: float, place_type: str,
     body = {
         'includedTypes': [place_type],
         'maxResultCount': 20,  # API limit per request
+        'rankPreference': 'DISTANCE',  # Prioritize closest results for better coverage
         'locationRestriction': {
             'circle': {
                 'center': {
@@ -85,7 +87,7 @@ def count_nearby_places(lat: float, lng: float, place_type: str,
         }
     }
 
-    # Add rating filter for restaurants
+    # Override to popularity ranking for restaurants (better quality results)
     if place_type == 'restaurant' and min_rating:
         body['rankPreference'] = 'POPULARITY'
 
@@ -130,6 +132,76 @@ def count_nearby_places(lat: float, lng: float, place_type: str,
         }
     except Exception as e:
         print(f"Places API error for {place_type}: {e}")
+        return {'count': 0, 'places': []}
+
+
+def search_by_text(lat: float, lng: float, query: str, radius_meters: int) -> dict:
+    """
+    Search for places by text query (e.g., business name like "Starbucks")
+    Uses Google Places Text Search API
+    Returns count and detailed list with names and distances
+    """
+    headers = {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': GOOGLE_API_KEY,
+        'X-Goog-FieldMask': 'places.displayName,places.rating,places.location,places.googleMapsUri'
+    }
+
+    body = {
+        'textQuery': query,
+        'maxResultCount': 20,
+        'rankPreference': 'DISTANCE',
+        'locationBias': {
+            'circle': {
+                'center': {
+                    'latitude': lat,
+                    'longitude': lng
+                },
+                'radius': radius_meters
+            }
+        }
+    }
+
+    try:
+        response = requests.post(TEXT_SEARCH_API_BASE, headers=headers, json=body)
+        response.raise_for_status()
+        data = response.json()
+
+        places = data.get('places', [])
+
+        # Calculate distances and build detailed list
+        detailed_places = []
+        for place in places:
+            place_lat = place.get('location', {}).get('latitude')
+            place_lng = place.get('location', {}).get('longitude')
+
+            if place_lat and place_lng:
+                # Calculate distance using Haversine formula approximation
+                lat_diff = abs(lat - place_lat) * 69  # ~69 miles per degree lat
+                lng_diff = abs(lng - place_lng) * 54.6  # ~54.6 miles per degree lng
+                distance = round((lat_diff**2 + lng_diff**2)**0.5, 2)
+
+                # Only include places within the radius
+                radius_miles = radius_meters / 1609.34
+                if distance <= radius_miles:
+                    detailed_places.append({
+                        'name': place.get('displayName', {}).get('text', 'Unknown'),
+                        'distance': distance,
+                        'url': place.get('googleMapsUri', ''),
+                        'lat': place_lat,
+                        'lng': place_lng
+                    })
+
+        # Sort by distance (closest first) and limit to 5
+        detailed_places.sort(key=lambda x: x['distance'])
+        detailed_places = detailed_places[:5]
+
+        return {
+            'count': len(detailed_places),
+            'places': detailed_places
+        }
+    except Exception as e:
+        print(f"Text search error for '{query}': {e}")
         return {'count': 0, 'places': []}
 
 
@@ -231,16 +303,18 @@ def find_nearest_airport(lat: float, lng: float, radius_meters: int = 50000) -> 
         return {'name': 'Error', 'distance_mi': 'N/A'}
 
 
-def evaluate_location(location: str, radius_miles: float, 
-                     selected_criteria: Optional[List[str]] = None) -> Dict:
+def evaluate_location(location: str, radius_miles: float,
+                     selected_criteria: Optional[List[str]] = None,
+                     custom_amenities: Optional[List[str]] = None) -> Dict:
     """
     Main function to evaluate a location
-    
+
     Args:
         location: Address or city name
         radius_miles: Search radius in miles
         selected_criteria: List of criteria keys to evaluate (defaults to all)
-    
+        custom_amenities: List of custom place types to search for
+
     Returns:
         Dictionary with location evaluation data
     """
@@ -248,15 +322,15 @@ def evaluate_location(location: str, radius_miles: float,
     geo_data = geocode_location(location)
     if not geo_data:
         return {'error': 'Location not found'}
-    
+
     lat = geo_data['lat']
     lng = geo_data['lng']
     radius_meters = int(radius_miles * 1609.34)  # Convert miles to meters
-    
+
     # Default to all criteria if none specified
     if selected_criteria is None:
         selected_criteria = list(CRITERIA_MAP.keys())
-    
+
     # Gather amenity data (counts and details)
     amenities = {}
     for criterion in selected_criteria:
@@ -268,6 +342,13 @@ def evaluate_location(location: str, radius_miles: float,
             else:
                 result = count_nearby_places(lat, lng, place_type, radius_meters)
             amenities[criterion] = result
+
+    # Add custom amenities using text search (supports business names and queries)
+    if custom_amenities:
+        for query in custom_amenities:
+            if query and query.strip():
+                result = search_by_text(lat, lng, query.strip(), radius_meters)
+                amenities[query.strip()] = result
     
     # Get climate data
     climate = get_climate_data(lat, lng)

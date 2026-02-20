@@ -123,7 +123,6 @@ export default function App() {
   const performSearch = async () => {
     setLoading(true);
     setError(null);
-    setReport(null);
 
     // Filter out empty custom amenities
     const filledCustom = customAmenities.filter(a => a.trim() !== '');
@@ -224,7 +223,6 @@ export default function App() {
               return (
                 <div>
                   <LocationMap
-                    key={`map-${Array.from(selectedCriteria).sort().join(',')}-${restaurantMinRating}`}
                     center={report.coordinates}
                     amenities={filteredAmenities}
                   />
@@ -647,6 +645,7 @@ function ExpandableAmenityRow({ label, data, isExpanded, onToggle }) {
 function LocationMap({ center, amenities }) {
   const mapRef = React.useRef(null);
   const mapInstanceRef = React.useRef(null);
+  const markersRef = React.useRef([]);
   const [isLoaded, setIsLoaded] = React.useState(false);
   const [apiKey, setApiKey] = React.useState(null);
 
@@ -705,9 +704,10 @@ function LocationMap({ center, amenities }) {
     document.head.appendChild(script);
   }, [apiKey]);
 
-  // Initialize map and markers
+  // Initialize map (runs once when loaded)
   useEffect(() => {
     if (!isLoaded || !mapRef.current || !center) return;
+    if (mapInstanceRef.current) return; // already initialized
 
     const map = new window.google.maps.Map(mapRef.current, {
       center: { lat: center.lat, lng: center.lng },
@@ -744,8 +744,17 @@ function LocationMap({ center, amenities }) {
         anchor: new window.google.maps.Point(16, 16),
       },
     });
+  }, [isLoaded, center]);
 
-    // Collect all place coordinates for bounds
+  // Update markers whenever amenities change
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map || !amenities) return;
+
+    // Clear existing amenity markers
+    markersRef.current.forEach(marker => marker.setMap(null));
+    markersRef.current = [];
+
     const bounds = new window.google.maps.LatLngBounds();
     bounds.extend({ lat: center.lat, lng: center.lng });
 
@@ -757,7 +766,6 @@ function LocationMap({ center, amenities }) {
 
       data.places?.forEach(place => {
         if (place.lat && place.lng) {
-          // Create emoji marker icon with color-coded label
           const svgIcon = {
             url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
               <svg xmlns="http://www.w3.org/2000/svg" width="200" height="32" viewBox="0 0 200 32">
@@ -776,7 +784,6 @@ function LocationMap({ center, amenities }) {
             icon: svgIcon,
           });
 
-          // Create InfoWindow with amenity info
           const infoWindow = new window.google.maps.InfoWindow({
             content: `
               <div style="padding: 8px; min-width: 200px;">
@@ -788,11 +795,11 @@ function LocationMap({ center, amenities }) {
             `
           });
 
-          // Open InfoWindow on marker click
           marker.addListener('click', () => {
             infoWindow.open(map, marker);
           });
 
+          markersRef.current.push(marker);
           bounds.extend({ lat: place.lat, lng: place.lng });
         }
       });
@@ -801,12 +808,11 @@ function LocationMap({ center, amenities }) {
     // Fit map to show all markers
     map.fitBounds(bounds);
 
-    // Ensure minimum zoom level
     const listener = window.google.maps.event.addListener(map, 'idle', () => {
       if (map.getZoom() > 15) map.setZoom(15);
       window.google.maps.event.removeListener(listener);
     });
-  }, [isLoaded, center, amenities]);
+  }, [amenities, center, isLoaded]);
 
   if (!isLoaded) {
     return (

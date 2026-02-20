@@ -553,6 +553,14 @@ function ClimateMetricRow({ label, value, type }) {
 function ExpandableAmenityRow({ label, data, isExpanded, onToggle }) {
   const count = data.count || 0;
   const places = data.places || [];
+  const [sortBy, setSortBy] = React.useState('distance');
+
+  const sortedPlaces = [...places].sort((a, b) => {
+    if (sortBy === 'rating') {
+      return (b.rating || 0) - (a.rating || 0);
+    }
+    return (a.distance || 0) - (b.distance || 0);
+  });
 
   return (
     <div className="border border-gray-200 rounded-lg">
@@ -576,8 +584,30 @@ function ExpandableAmenityRow({ label, data, isExpanded, onToggle }) {
 
       {isExpanded && places.length > 0 && (
         <div className="px-4 pb-3 pt-1 bg-gray-50 border-t border-gray-200">
+          <div className="flex gap-4 py-2 text-xs text-gray-500">
+            <label className="flex items-center gap-1 cursor-pointer">
+              <input
+                type="radio"
+                name={`sort-${label}`}
+                value="distance"
+                checked={sortBy === 'distance'}
+                onChange={() => setSortBy('distance')}
+              />
+              Distance
+            </label>
+            <label className="flex items-center gap-1 cursor-pointer">
+              <input
+                type="radio"
+                name={`sort-${label}`}
+                value="rating"
+                checked={sortBy === 'rating'}
+                onChange={() => setSortBy('rating')}
+              />
+              Rating
+            </label>
+          </div>
           <div className="space-y-2 max-h-[250px] overflow-y-auto">
-            {places.map((place, idx) => (
+            {sortedPlaces.map((place, idx) => (
               <div key={idx} className="flex justify-between items-center py-2 text-sm">
                 <div className="flex items-center gap-2">
                   {place.url ? (

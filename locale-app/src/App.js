@@ -226,6 +226,7 @@ export default function App() {
                   <LocationMap
                     center={report.coordinates}
                     amenities={filteredAmenities}
+                    radiusMiles={parseFloat(radius)}
                   />
                 </div>
               );
@@ -644,10 +645,11 @@ function ExpandableAmenityRow({ label, data, isExpanded, onToggle, sortBy, onSor
   );
 }
 
-function LocationMap({ center, amenities }) {
+function LocationMap({ center, amenities, radiusMiles }) {
   const mapRef = React.useRef(null);
   const mapInstanceRef = React.useRef(null);
   const markersRef = React.useRef([]);
+  const circleRef = React.useRef(null);
   const [isLoaded, setIsLoaded] = React.useState(false);
   const [apiKey, setApiKey] = React.useState(null);
 
@@ -757,6 +759,19 @@ function LocationMap({ center, amenities }) {
     markersRef.current.forEach(marker => marker.setMap(null));
     markersRef.current = [];
 
+    // Draw radius circle
+    if (circleRef.current) circleRef.current.setMap(null);
+    circleRef.current = new window.google.maps.Circle({
+      map,
+      center: { lat: center.lat, lng: center.lng },
+      radius: radiusMiles * 1609.34,
+      strokeColor: '#9CA3AF',
+      strokeOpacity: 0.5,
+      strokeWeight: 1,
+      fillColor: '#9CA3AF',
+      fillOpacity: 0.06,
+    });
+
     const bounds = new window.google.maps.LatLngBounds();
     bounds.extend({ lat: center.lat, lng: center.lng });
 
@@ -814,7 +829,7 @@ function LocationMap({ center, amenities }) {
       if (map.getZoom() > 15) map.setZoom(15);
       window.google.maps.event.removeListener(listener);
     });
-  }, [amenities, center, isLoaded]);
+  }, [amenities, center, isLoaded, radiusMiles]);
 
   if (!isLoaded) {
     return (

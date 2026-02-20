@@ -8,11 +8,11 @@ NC='\033[0m' # No Color
 
 echo -e "${BLUE}Stopping Locale development servers...${NC}\n"
 
-# Stop API server
+# Stop API server (kill process group to catch Flask reloader child)
 if [ -f /tmp/locale_api.pid ]; then
     API_PID=$(cat /tmp/locale_api.pid)
     if kill -0 $API_PID 2>/dev/null; then
-        kill $API_PID
+        kill -- -$(ps -o pgid= -p $API_PID | tr -d ' ')
         echo -e "${RED}✓ Stopped API server (PID: $API_PID)${NC}"
     else
         echo "  API server not running"
@@ -21,12 +21,14 @@ if [ -f /tmp/locale_api.pid ]; then
 else
     echo "  No API server PID file found"
 fi
+# Fallback: catch any stray api_server.py processes
+pkill -f "python.*api_server.py" 2>/dev/null
 
 # Stop React server
 if [ -f /tmp/locale_react.pid ]; then
     REACT_PID=$(cat /tmp/locale_react.pid)
     if kill -0 $REACT_PID 2>/dev/null; then
-        kill $REACT_PID
+        kill -- -$(ps -o pgid= -p $REACT_PID | tr -d ' ')
         echo -e "${RED}✓ Stopped React server (PID: $REACT_PID)${NC}"
     else
         echo "  React server not running"
@@ -35,5 +37,7 @@ if [ -f /tmp/locale_react.pid ]; then
 else
     echo "  No React server PID file found"
 fi
+# Fallback: catch any stray react-scripts processes
+pkill -f "react-scripts/scripts/start" 2>/dev/null
 
 echo -e "\n${BLUE}All servers stopped.${NC}\n"

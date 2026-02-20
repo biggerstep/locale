@@ -650,6 +650,7 @@ function LocationMap({ center, amenities, radiusMiles }) {
   const mapInstanceRef = React.useRef(null);
   const markersRef = React.useRef([]);
   const circleRef = React.useRef(null);
+  const openInfoWindowRef = React.useRef(null);
   const [isLoaded, setIsLoaded] = React.useState(false);
   const [apiKey, setApiKey] = React.useState(null);
 
@@ -733,6 +734,23 @@ function LocationMap({ center, amenities, radiusMiles }) {
 
     mapInstanceRef.current = map;
 
+    // Override InfoWindow styles to remove built-in close button and extra top padding
+    const style = document.createElement('style');
+    style.textContent = `
+      .gm-ui-hover-effect { display: none !important; }
+      .gm-style-iw { padding: 0 !important; }
+      .gm-style-iw-d { overflow: hidden !important; padding: 0 !important; }
+    `;
+    document.head.appendChild(style);
+
+    // Close open InfoWindow when clicking on the map
+    map.addListener('click', () => {
+      if (openInfoWindowRef.current) {
+        openInfoWindowRef.current.close();
+        openInfoWindowRef.current = null;
+      }
+    });
+
     // Add center marker (location) - yellow star
     new window.google.maps.Marker({
       position: { lat: center.lat, lng: center.lng },
@@ -803,17 +821,20 @@ function LocationMap({ center, amenities, radiusMiles }) {
 
           const infoWindow = new window.google.maps.InfoWindow({
             content: `
-              <div style="padding: 8px; min-width: 200px;">
-                <div style="font-size: 18px; margin-bottom: 4px;">${icon} <strong>${place.name}</strong></div>
-                <div style="color: #666; font-size: 13px; margin-bottom: 4px;">${categoryLabel}</div>
+              <div style="padding: 2px 8px 8px 8px; min-width: 180px;">
+                <div style="font-size: 15px; font-weight: 600; margin-bottom: 3px;">${icon} ${place.name}</div>
+                <div style="color: #666; font-size: 12px; margin-bottom: 2px;">${categoryLabel}</div>
+                ${place.rating ? `<div style="color: #b45309; font-size: 12px; margin-bottom: 2px;">⭐ ${place.rating.toFixed(1)}</div>` : ''}
                 <div style="color: #999; font-size: 12px;">${place.distance} mi away</div>
-                ${place.url ? `<a href="${place.url}" target="_blank" rel="noopener noreferrer" style="color: #3B82F6; font-size: 12px; margin-top: 6px; display: inline-block;">View on Google Maps →</a>` : ''}
+                ${place.url ? `<a href="${place.url}" target="_blank" rel="noopener noreferrer" style="color: #3B82F6; font-size: 12px; margin-top: 5px; display: inline-block;">View on Google Maps →</a>` : ''}
               </div>
             `
           });
 
           marker.addListener('click', () => {
+            if (openInfoWindowRef.current) openInfoWindowRef.current.close();
             infoWindow.open(map, marker);
+            openInfoWindowRef.current = infoWindow;
           });
 
           markersRef.current.push(marker);

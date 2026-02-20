@@ -203,9 +203,7 @@ def search_by_text(lat: float, lng: float, query: str, radius_meters: int) -> di
                         'lng': place_lng
                     })
 
-        # Sort by distance (closest first) and limit to 5
         detailed_places.sort(key=lambda x: x['distance'])
-        detailed_places = detailed_places[:5]
 
         return {
             'count': len(detailed_places),

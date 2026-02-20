@@ -6,8 +6,8 @@ This is a location evaluation application that helps users assess locations base
 
 ```
 Backend (Flask)          Frontend (React)
-├── api_server.py       ├── locale-app/src/App.js
-└── locale_backend.py   └── locale_frontend.jsx (standalone)
+├── api_server.py       └── locale-app/src/App.js
+└── locale_backend.py
 ```
 
 **Backend**: Flask REST API (port 5001)
@@ -16,8 +16,7 @@ Backend (Flask)          Frontend (React)
 - Open-Meteo API for climate data (free, no key needed)
 
 **Frontend**: React with Tailwind CSS (port 3000)
-- Two versions: create-react-app (`locale-app/`) and standalone (`locale_frontend.jsx`)
-- Both are kept in sync with identical functionality
+- create-react-app (`locale-app/`)
 
 ## Key Design Decisions
 
@@ -172,8 +171,6 @@ Uses `master` (not `main`) per user preference.
 locale/
 ├── api_server.py           # Flask REST API
 ├── locale_backend.py       # Core evaluation logic
-├── locale_frontend.jsx     # Standalone React component
-├── index.html              # Standalone HTML runner
 ├── start_locale            # Dev server startup script
 ├── stop_locale             # Dev server shutdown script
 ├── .env                    # API keys (NOT committed)

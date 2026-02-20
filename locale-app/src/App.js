@@ -15,6 +15,7 @@ export default function App() {
   const [report, setReport] = useState(null);
   const [error, setError] = useState(null);
   const [expandedAmenities, setExpandedAmenities] = useState(new Set());
+  const [sortOrders, setSortOrders] = useState({});
   const [expandedSections, setExpandedSections] = useState(new Set(['amenities', 'climate'])); // Start with both expanded
   const [restaurantMinRating, setRestaurantMinRating] = useState('3'); // Minimum rating for restaurants
 
@@ -387,6 +388,8 @@ export default function App() {
                           data={filteredData}
                           isExpanded={expandedAmenities.has(key)}
                           onToggle={() => toggleAmenity(key)}
+                          sortBy={sortOrders[key] || 'distance'}
+                          onSortChange={(order) => setSortOrders(prev => ({ ...prev, [key]: order }))}
                         />
                       );
                     })}
@@ -548,10 +551,9 @@ function ClimateMetricRow({ label, value, type }) {
   );
 }
 
-function ExpandableAmenityRow({ label, data, isExpanded, onToggle }) {
+function ExpandableAmenityRow({ label, data, isExpanded, onToggle, sortBy, onSortChange }) {
   const count = data.count || 0;
   const places = data.places || [];
-  const [sortBy, setSortBy] = React.useState('distance');
 
   const sortedPlaces = [...places].sort((a, b) => {
     if (sortBy === 'rating') {
@@ -589,7 +591,7 @@ function ExpandableAmenityRow({ label, data, isExpanded, onToggle }) {
                 name={`sort-${label}`}
                 value="distance"
                 checked={sortBy === 'distance'}
-                onChange={() => setSortBy('distance')}
+                onChange={() => onSortChange('distance')}
               />
               Distance
             </label>
@@ -599,7 +601,7 @@ function ExpandableAmenityRow({ label, data, isExpanded, onToggle }) {
                 name={`sort-${label}`}
                 value="rating"
                 checked={sortBy === 'rating'}
-                onChange={() => setSortBy('rating')}
+                onChange={() => onSortChange('rating')}
               />
               Rating
             </label>

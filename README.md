@@ -156,7 +156,8 @@ curl http://localhost:5001/api/criteria
 - `restaurants` - Restaurants (4+ star rated)
 - `coffee_shops` - Cafes, coffee shops
 - `breweries` - Breweries, craft beer
-- `pharmacies` - Drug stores, pharmacies
+- `hotels` - Hotels and lodging
+- `home_improvement` - Home improvement stores (Lowe's, Home Depot)
 - `gyms` - Fitness centers, gyms
 - `parks` - Parks, recreational areas
 - `schools` - Schools (all levels)

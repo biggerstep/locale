@@ -245,24 +245,61 @@ def get_climate_data(lat: float, lng: float) -> Dict:
         temp_min = daily.get('temperature_2m_min', [])
         precip = daily.get('precipitation_sum', [])
         
+        times = daily.get('time', [])
+
         # Calculate averages
         avg_temp = round((sum(temp_max) + sum(temp_min)) / (len(temp_max) + len(temp_min)), 1)
         total_precip = round(sum(precip), 1)
-        
+
         # Estimate sunny days (days with < 0.1 inch precipitation)
         sunny_days = sum(1 for p in precip if p < 0.1)
-        
+
+        # Group daily avg temps by month
+        month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        month_buckets = {m: [] for m in month_names}
+
+        for i, date_str in enumerate(times):
+            try:
+                month_idx = int(date_str[5:7]) - 1
+                tmax = temp_max[i] if i < len(temp_max) else None
+                tmin = temp_min[i] if i < len(temp_min) else None
+                if tmax is not None and tmin is not None:
+                    month_buckets[month_names[month_idx]].append((tmax + tmin) / 2)
+            except (IndexError, ValueError):
+                pass
+
+        monthly_temps = {
+            m: round(sum(vals) / len(vals), 1) if vals else None
+            for m, vals in month_buckets.items()
+        }
+
+        season_months = {
+            'Spring': ['Mar', 'Apr', 'May'],
+            'Summer': ['Jun', 'Jul', 'Aug'],
+            'Fall':   ['Sep', 'Oct', 'Nov'],
+            'Winter': ['Dec', 'Jan', 'Feb'],
+        }
+        seasonal_temps = {}
+        for season, months in season_months.items():
+            vals = [monthly_temps[m] for m in months if monthly_temps.get(m) is not None]
+            seasonal_temps[season] = round(sum(vals) / len(vals), 1) if vals else None
+
         return {
             'avg_temp_f': f"{avg_temp}°F",
             'annual_precipitation': f"{total_precip} in/yr",
-            'sunny_days': f"{sunny_days} days/yr"
+            'sunny_days': f"{sunny_days} days/yr",
+            'monthly_temps': monthly_temps,
+            'seasonal_temps': seasonal_temps,
         }
     except Exception as e:
         print(f"Climate API error: {e}")
         return {
             'avg_temp_f': 'N/A',
             'annual_precipitation': 'N/A',
-            'sunny_days': 'N/A'
+            'sunny_days': 'N/A',
+            'monthly_temps': {},
+            'seasonal_temps': {},
         }
 
 

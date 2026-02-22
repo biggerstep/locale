@@ -18,7 +18,9 @@ export default function App() {
   const [sortOrders, setSortOrders] = useState({});
   const [expandedSections, setExpandedSections] = useState(new Set(['climate']));
   const [restaurantMinRating, setRestaurantMinRating] = useState('3'); // Minimum rating for restaurants
+  const [tempView, setTempView] = useState('annual'); // 'annual' | 'seasonal' | 'monthly'
   const locationInputRef = useRef(null);
+  const mapControlRef = useRef(null);
 
   // Load available criteria on mount
   useEffect(() => {
@@ -244,6 +246,7 @@ export default function App() {
                     center={report.coordinates}
                     amenities={filteredAmenities}
                     radiusMiles={parseFloat(radius)}
+                    controlRef={mapControlRef}
                   />
                 </div>
               );
@@ -272,7 +275,7 @@ export default function App() {
               <label className="block text-sm font-medium text-gray-700 mb-3">
                 Select amenities to evaluate
               </label>
-              <div className="grid grid-cols-2 gap-x-6">
+              <div className="grid grid-cols-2">
                 {availableCriteria.map(criterion => {
                   let amenityData = report?.amenities?.[criterion.key];
                   if (amenityData && criterion.key === 'restaurants') {
@@ -292,7 +295,7 @@ export default function App() {
                   });
 
                   return (
-                    <div key={criterion.key}>
+                    <div key={criterion.key} className="odd:pr-4 even:pl-4 even:border-l even:border-gray-200">
                       <div className="flex items-center justify-between py-1.5">
                         <label className="flex items-center gap-2 cursor-pointer flex-1 min-w-0">
                           <input
@@ -372,18 +375,13 @@ export default function App() {
                             ) : sortedPlaces.map((place, idx) => (
                               <div key={idx} className="flex justify-between items-center py-0.5 text-xs gap-2">
                                 <div className="flex items-center gap-1 min-w-0 flex-1">
-                                  {place.url ? (
-                                    <a
-                                      href={place.url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-blue-600 hover:underline truncate"
-                                    >
-                                      {place.name}
-                                    </a>
-                                  ) : (
-                                    <span className="text-gray-700 truncate">{place.name}</span>
-                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => mapControlRef.current?.openInfo(place.lat, place.lng)}
+                                    className="text-blue-600 hover:underline truncate text-left"
+                                  >
+                                    {place.name}
+                                  </button>
                                   {place.rating && (
                                     <span className="text-yellow-600 flex-shrink-0">⭐ {place.rating.toFixed(1)}</span>
                                   )}
@@ -497,7 +495,13 @@ export default function App() {
               </button>
               {expandedSections.has('climate') && (
                 <div className="space-y-3">
-                  <ClimateMetricRow label="Average Temperature" value={report.climate.avg_temp_f} type="temperature" />
+                  <TemperatureRow
+                    annual={report.climate.avg_temp_f}
+                    monthly={report.climate.monthly_temps || {}}
+                    seasonal={report.climate.seasonal_temps || {}}
+                    view={tempView}
+                    onViewChange={setTempView}
+                  />
                   <ClimateMetricRow label="Annual Precipitation" value={report.climate.annual_precipitation} type="precipitation" />
                   <ClimateMetricRow label="Sunny Days" value={report.climate.sunny_days} type="sunny" />
                 </div>
@@ -632,6 +636,95 @@ function ClimateMetricRow({ label, value, type }) {
   );
 }
 
+function TempDot({ temp }) {
+  if (temp == null) return <div className="w-5 h-5 rounded-full bg-gray-200 flex-shrink-0" />;
+  const normalized = Math.max(0, Math.min(1, (temp - 30) / 50));
+  const hue = (1 - normalized) * 240;
+  return (
+    <div
+      className="w-5 h-5 rounded-full border border-gray-200 flex-shrink-0"
+      style={{ backgroundColor: `hsl(${hue}, 70%, 50%)` }}
+      title={`${Math.round(temp)}°F`}
+    />
+  );
+}
+
+function TemperatureRow({ annual, monthly, seasonal, view, onViewChange }) {
+  const VIEWS = ['annual', 'seasonal', 'monthly'];
+  const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const SEASONS = ['Spring', 'Summer', 'Fall', 'Winter'];
+
+  const annualTemp = parseFloat(annual);
+  const annualNormalized = !isNaN(annualTemp) ? Math.max(0, Math.min(1, (annualTemp - 30) / 50)) : null;
+  const annualHue = annualNormalized != null ? (1 - annualNormalized) * 240 : null;
+
+  return (
+    <div className="py-3 border-b border-gray-100 last:border-b-0">
+      {/* Label row with toggle */}
+      <div className="flex justify-between items-center mb-2">
+        <div className="flex items-center gap-2">
+          <span className="text-gray-600">Average Temperature</span>
+          <div className="w-12 h-2 rounded-full flex-shrink-0" style={{
+            background: 'linear-gradient(to right, hsl(240, 70%, 50%), hsl(120, 70%, 50%), hsl(0, 70%, 50%))'
+          }} />
+        </div>
+        <div className="flex rounded-full border border-gray-200 overflow-hidden text-xs">
+          {VIEWS.map(v => (
+            <button
+              key={v}
+              onClick={() => onViewChange(v)}
+              className={`px-2 py-0.5 capitalize transition ${view === v ? 'bg-gray-700 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
+            >
+              {v}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Content */}
+      {view === 'annual' && (
+        <div className="flex items-center justify-end gap-2">
+          {annualHue != null && (
+            <div
+              className="w-6 h-6 rounded-full border-2 border-gray-200 flex-shrink-0"
+              style={{ backgroundColor: `hsl(${annualHue}, 70%, 50%)` }}
+            />
+          )}
+          <span className="font-medium text-gray-900">{annual}</span>
+        </div>
+      )}
+
+      {view === 'seasonal' && (
+        <div className="flex justify-end gap-4">
+          {SEASONS.map(s => (
+            <div key={s} className="flex flex-col items-center gap-1">
+              <TempDot temp={seasonal[s]} />
+              <span className="text-xs text-gray-500">{s}</span>
+              <span className="text-xs font-medium text-gray-900">
+                {seasonal[s] != null ? `${Math.round(seasonal[s])}°F` : '—'}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {view === 'monthly' && (
+        <div className="grid grid-cols-6 gap-x-2 gap-y-3 mt-1">
+          {MONTH_NAMES.map(m => (
+            <div key={m} className="flex flex-col items-center gap-1">
+              <span className="text-xs text-gray-400">{m}</span>
+              <TempDot temp={monthly[m]} />
+              <span className="text-xs font-medium text-gray-900">
+                {monthly[m] != null ? `${Math.round(monthly[m])}°` : '—'}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ExpandableAmenityRow({ label, data, isExpanded, onToggle, sortBy, onSortChange }) {
   const count = data.count || 0;
   const places = data.places || [];
@@ -725,14 +818,32 @@ function ExpandableAmenityRow({ label, data, isExpanded, onToggle, sortBy, onSor
   );
 }
 
-function LocationMap({ center, amenities, radiusMiles }) {
+function LocationMap({ center, amenities, radiusMiles, controlRef }) {
   const mapRef = React.useRef(null);
   const mapInstanceRef = React.useRef(null);
   const markersRef = React.useRef([]);
   const circleRef = React.useRef(null);
   const openInfoWindowRef = React.useRef(null);
+  const infoWindowsRef = React.useRef({});
   const [isLoaded, setIsLoaded] = React.useState(false);
   const [apiKey, setApiKey] = React.useState(null);
+
+  // Expose openInfo to parent via controlRef
+  useEffect(() => {
+    if (!controlRef) return;
+    controlRef.current = {
+      openInfo: (lat, lng) => {
+        const entry = infoWindowsRef.current[`${lat},${lng}`];
+        const map = mapInstanceRef.current;
+        if (!entry || !map) return;
+        if (openInfoWindowRef.current) openInfoWindowRef.current.close();
+        entry.infoWindow.open(map, entry.marker);
+        openInfoWindowRef.current = entry.infoWindow;
+        map.panTo({ lat, lng });
+        mapRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    };
+  }, [controlRef]);
 
   // Color map for different amenity types
   const categoryColors = {
@@ -858,6 +969,7 @@ function LocationMap({ center, amenities, radiusMiles }) {
     // Clear existing amenity markers
     markersRef.current.forEach(marker => marker.setMap(null));
     markersRef.current = [];
+    infoWindowsRef.current = {};
 
     // Draw radius circle
     if (circleRef.current) circleRef.current.setMap(null);
@@ -885,13 +997,12 @@ function LocationMap({ center, amenities, radiusMiles }) {
         if (place.lat && place.lng) {
           const svgIcon = {
             url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
-              <svg xmlns="http://www.w3.org/2000/svg" width="200" height="32" viewBox="0 0 200 32">
-                <text x="16" y="24" font-size="24" text-anchor="middle">${icon}</text>
-                <text x="38" y="20" font-size="12" font-family="Arial, sans-serif" fill="${color}" font-weight="600" stroke="#ffffff" stroke-width="3" paint-order="stroke">${place.name}</text>
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+                <text x="16" y="26" font-size="22" text-anchor="middle">${icon}</text>
               </svg>
             `)}`,
-            scaledSize: new window.google.maps.Size(200, 32),
-            anchor: new window.google.maps.Point(16, 16),
+            scaledSize: new window.google.maps.Size(32, 32),
+            anchor: new window.google.maps.Point(16, 28),
           };
 
           const marker = new window.google.maps.Marker({
@@ -919,6 +1030,11 @@ function LocationMap({ center, amenities, radiusMiles }) {
             openInfoWindowRef.current = infoWindow;
           });
 
+          infoWindow.addListener('closeclick', () => {
+            openInfoWindowRef.current = null;
+          });
+
+          infoWindowsRef.current[`${place.lat},${place.lng}`] = { marker, infoWindow };
           markersRef.current.push(marker);
           bounds.extend({ lat: place.lat, lng: place.lng });
         }

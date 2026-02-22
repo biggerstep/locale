@@ -33,10 +33,16 @@ echo $REACT_PID > /tmp/locale_react.pid
 echo "  ✓ React server running (PID: $REACT_PID)"
 echo "    Logs: /tmp/locale_react.log"
 
+TAILSCALE_IP=$(tailscale ip -4 2>/dev/null)
+
 echo -e "\n${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${GREEN}✓ Development servers started!${NC}\n"
 echo "  API:   http://localhost:5001"
 echo "  React: http://localhost:3000"
+if [ -n "$TAILSCALE_IP" ]; then
+  echo ""
+  echo "  Tailscale: http://${TAILSCALE_IP}:3000"
+fi
 echo ""
 echo "To stop servers, run: ./stop_locale"
 echo "To view logs:"

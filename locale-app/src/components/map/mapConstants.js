@@ -9,7 +9,7 @@ export const categoryColors = {
   'gyms': '#6366F1',
   'parks': '#22C55E',
   'schools': '#3B82F6',
-  'hospitals': '#DC2626',
+  'medical': '#DC2626',
   'gas_stations': '#FBBF24',
 };
 
@@ -24,6 +24,6 @@ export const categoryIcons = {
   'gyms': '💪',
   'parks': '🌳',
   'schools': '🏫',
-  'hospitals': '🏥',
+  'medical': '🏥',
   'gas_stations': '⛽',
 };

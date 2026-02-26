@@ -30,8 +30,8 @@ CRITERIA_MAP = {
     'home_improvement': 'home_improvement_store',
     'gyms': 'gym',
     'parks': 'park',
-    'schools': 'school',
-    'hospitals': 'hospital',
+    'schools': ['primary_school', 'secondary_school', 'university', 'preschool'],
+    'medical': ['hospital', 'pharmacy'],
     'gas_stations': 'gas_station',
 }
 
@@ -61,7 +61,7 @@ def geocode_location(location: str) -> Optional[Dict]:
         return None
 
 
-def count_nearby_places(lat: float, lng: float, place_type: str,
+def count_nearby_places(lat: float, lng: float, place_type,
                        radius_meters: int, min_rating: float = 4.0) -> dict:
     """
     Get places of a given type within radius using Google Places API (New)
@@ -74,8 +74,10 @@ def count_nearby_places(lat: float, lng: float, place_type: str,
         'X-Goog-FieldMask': 'places.displayName,places.rating,places.location,places.types,places.googleMapsUri'
     }
 
+    types_list = [place_type] if isinstance(place_type, str) else place_type
+
     body = {
-        'includedTypes': [place_type],
+        'includedTypes': types_list,
         'maxResultCount': 20,  # API limit per request
         'rankPreference': 'DISTANCE',  # Prioritize closest results for better coverage
         'locationRestriction': {
@@ -90,7 +92,7 @@ def count_nearby_places(lat: float, lng: float, place_type: str,
     }
 
     # Override to popularity ranking for restaurants (better quality results)
-    if place_type == 'restaurant' and min_rating:
+    if 'restaurant' in types_list and min_rating:
         body['rankPreference'] = 'POPULARITY'
 
     try:
@@ -100,15 +102,32 @@ def count_nearby_places(lat: float, lng: float, place_type: str,
 
         places = data.get('places', [])
 
-        # Filter by primary type for coffee shops to avoid misclassification (gas stations)
-        # For other types, just check if type is anywhere in the list
-        if place_type == 'cafe':
-            places = [p for p in places if p.get('types', []) and p['types'][0] == place_type]
+        # For all types, check if any requested type appears in the place's types list.
+        # Some types need primary-type exclusions to filter out false positives.
+        types_set = set(types_list)
+        CAFE_EXCLUDED_PRIMARY = {'gas_station', 'grocery_store', 'convenience_store', 'supermarket'}
+        SCHOOL_EXCLUDED_PRIMARY = {'sports_school', 'sports_coaching', 'sports_club', 'gym', 'fitness_center'}
+
+        def primary_type(p):
+            return p.get('types', [None])[0]
+
+        if 'cafe' in types_set:
+            places = [
+                p for p in places
+                if any(t in types_set for t in p.get('types', []))
+                and primary_type(p) not in CAFE_EXCLUDED_PRIMARY
+            ]
+        elif 'school' in types_set:
+            places = [
+                p for p in places
+                if any(t in types_set for t in p.get('types', []))
+                and primary_type(p) not in SCHOOL_EXCLUDED_PRIMARY
+            ]
         else:
-            places = [p for p in places if place_type in p.get('types', [])]
+            places = [p for p in places if any(t in types_set for t in p.get('types', []))]
 
         # Filter by rating if specified (for restaurants)
-        if place_type == 'restaurant' and min_rating:
+        if 'restaurant' in types_list and min_rating:
             places = [p for p in places if p.get('rating', 0) >= min_rating]
 
         # Calculate distances and build detailed list

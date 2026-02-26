@@ -7,7 +7,7 @@ Real-world implementation with Google Places API and Open-Meteo climate data.
 ```
 locale_backend.py       - Core location evaluation logic
 api_server.py           - Flask REST API server (port 5001)
-locale-app/src/App.js   - React UI (create-react-app, port 3000)
+locale-app/src/         - React UI (create-react-app, port 3000)
 ```
 
 ## Setup
@@ -160,11 +160,28 @@ curl http://localhost:5001/api/criteria
 
 ## Files
 
-- `locale_backend.py` - Core evaluation logic
-- `api_server.py` - Flask API server
-- `locale-app/src/App.js` - React frontend
-- `start_locale` / `stop_locale` - Dev server scripts
-- `requirements.txt` - Python dependencies
-- `.env` - API keys (not committed)
-- `.env.example` - Template for `.env`
-- `README.md` - This file
+```
+locale/
+├── locale_backend.py               # Core evaluation logic (Google Places, climate)
+├── api_server.py                   # Flask REST API (port 5001)
+├── start_locale / stop_locale      # Dev server scripts
+├── requirements.txt                # Python dependencies
+├── .env                            # API keys (not committed)
+├── .env.example                    # Template for .env
+└── locale-app/src/
+    ├── App.js                      # Root component: state, effects, layout
+    ├── api.js                      # API_BASE, fetchCriteria(), evaluateLocation()
+    └── components/
+        ├── CriteriaSelector.js     # Amenity checkbox grid with inline results
+        ├── CustomAmenities.js      # Custom amenity inputs and results
+        ├── ReportPanel.js          # Report: header, climate, transportation
+        ├── climate/
+        │   ├── ClimateMetricRow.js # Precipitation and sunny days rows
+        │   └── TemperatureRow.js   # Annual/Seasonal/Monthly temperature toggle
+        ├── map/
+        │   ├── LocationMap.js      # Google Maps component with markers
+        │   └── mapConstants.js     # categoryColors and categoryIcons
+        └── shared/
+            ├── MetricRow.js        # Generic label/value row
+            └── ExpandableAmenityRow.js  # Expandable list with sort controls
+```

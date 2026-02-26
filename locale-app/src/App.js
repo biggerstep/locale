@@ -709,13 +709,13 @@ function TemperatureRow({ annual, monthly, seasonal, view, onViewChange }) {
       )}
 
       {view === 'monthly' && (
-        <div className="grid grid-cols-6 gap-x-2 gap-y-3 mt-1">
+        <div className="flex flex-col gap-1 mt-1">
           {MONTH_NAMES.map(m => (
-            <div key={m} className="flex flex-col items-center gap-1">
-              <span className="text-xs text-gray-400">{m}</span>
+            <div key={m} className="flex items-center gap-2">
+              <span className="text-xs text-gray-400 w-6">{m}</span>
               <TempDot temp={monthly[m]} />
-              <span className="text-xs font-medium text-gray-900">
-                {monthly[m] != null ? `${Math.round(monthly[m])}°` : '—'}
+              <span className="text-xs font-medium text-gray-900 w-8 text-right">
+                {monthly[m] != null ? `${Math.round(monthly[m])}°F` : '—'}
               </span>
             </div>
           ))}
@@ -930,9 +930,13 @@ function LocationMap({ center, amenities, radiusMiles, controlRef }) {
     // Override InfoWindow styles to remove built-in close button and extra top padding
     const style = document.createElement('style');
     style.textContent = `
-      .gm-ui-hover-effect { display: none !important; }
       .gm-style-iw { padding: 0 !important; }
       .gm-style-iw-d { overflow: hidden !important; padding: 0 !important; }
+      .amenity-label {
+        white-space: nowrap !important;
+        pointer-events: none !important;
+        text-shadow: -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff, 2px 2px 0 #fff !important;
+      }
     `;
     document.head.appendChild(style);
 
@@ -995,14 +999,18 @@ function LocationMap({ center, amenities, radiusMiles, controlRef }) {
 
       data.places?.forEach(place => {
         if (place.lat && place.lng) {
+          const safeName = place.name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          const shortName = safeName.length > 15 ? safeName.slice(0, 14) + '…' : safeName;
           const svgIcon = {
             url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
-              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-                <text x="16" y="26" font-size="22" text-anchor="middle">${icon}</text>
+              <svg xmlns="http://www.w3.org/2000/svg" width="96" height="46" viewBox="0 0 96 46">
+                <text x="48" y="24" font-size="22" text-anchor="middle">${icon}</text>
+                <rect x="2" y="27" width="92" height="16" rx="8" fill="white" fill-opacity="0.85"/>
+                <text x="48" y="39" font-size="10" text-anchor="middle" font-family="Arial,sans-serif" font-weight="bold" fill="${color}">${shortName}</text>
               </svg>
             `)}`,
-            scaledSize: new window.google.maps.Size(32, 32),
-            anchor: new window.google.maps.Point(16, 28),
+            scaledSize: new window.google.maps.Size(96, 46),
+            anchor: new window.google.maps.Point(48, 26),
           };
 
           const marker = new window.google.maps.Marker({
@@ -1014,7 +1022,7 @@ function LocationMap({ center, amenities, radiusMiles, controlRef }) {
 
           const infoWindow = new window.google.maps.InfoWindow({
             content: `
-              <div style="padding: 2px 8px 8px 8px; min-width: 180px;">
+              <div style="padding: 24px 8px 8px 8px; min-width: 180px;">
                 <div style="font-size: 15px; font-weight: 600; margin-bottom: 3px;">${icon} ${place.name}</div>
                 <div style="color: #666; font-size: 12px; margin-bottom: 2px;">${categoryLabel}</div>
                 ${place.rating ? `<div style="color: #b45309; font-size: 12px; margin-bottom: 2px;">⭐ ${place.rating.toFixed(1)}</div>` : ''}

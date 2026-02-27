@@ -137,17 +137,17 @@ export default function LocationMap({ center, amenities, radiusMiles, controlRef
       data.places?.forEach(place => {
         if (place.lat && place.lng) {
           const safeName = place.name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-          const shortName = safeName.length > 15 ? safeName.slice(0, 14) + '…' : safeName;
+          const shortName = safeName.length > 20 ? safeName.slice(0, 19) + '…' : safeName;
           const svgIcon = {
             url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
-              <svg xmlns="http://www.w3.org/2000/svg" width="96" height="46" viewBox="0 0 96 46">
-                <text x="48" y="24" font-size="22" text-anchor="middle">${icon}</text>
-                <rect x="2" y="27" width="92" height="16" rx="8" fill="white" fill-opacity="0.85"/>
-                <text x="48" y="39" font-size="10" text-anchor="middle" font-family="Arial,sans-serif" font-weight="bold" fill="${color}">${shortName}</text>
+              <svg xmlns="http://www.w3.org/2000/svg" width="130" height="46" viewBox="0 0 130 46">
+                <text x="65" y="24" font-size="22" text-anchor="middle">${icon}</text>
+                <rect x="2" y="27" width="126" height="16" rx="8" fill="white" fill-opacity="0.85"/>
+                <text x="65" y="39" font-size="10" text-anchor="middle" font-family="Arial,sans-serif" font-weight="bold" fill="${color}">${shortName}</text>
               </svg>
             `)}`,
-            scaledSize: new window.google.maps.Size(96, 46),
-            anchor: new window.google.maps.Point(48, 26),
+            scaledSize: new window.google.maps.Size(130, 46),
+            anchor: new window.google.maps.Point(65, 26),
           };
 
           const marker = new window.google.maps.Marker({
@@ -159,7 +159,7 @@ export default function LocationMap({ center, amenities, radiusMiles, controlRef
 
           const infoWindow = new window.google.maps.InfoWindow({
             content: `
-              <div style="padding: 24px 8px 8px 8px; min-width: 180px;">
+              <div style="padding: 0 8px 8px 8px; min-width: 180px;">
                 <div style="font-size: 15px; font-weight: 600; margin-bottom: 3px;">${icon} ${place.name}</div>
                 <div style="color: #666; font-size: 12px; margin-bottom: 2px;">${categoryLabel}</div>
                 ${place.rating ? `<div style="color: #b45309; font-size: 12px; margin-bottom: 2px;">⭐ ${place.rating.toFixed(1)}</div>` : ''}
@@ -203,24 +203,6 @@ export default function LocationMap({ center, amenities, radiusMiles, controlRef
   }
 
   return (
-    <div>
-      <div ref={mapRef} className="w-full h-96 rounded-lg border border-gray-200" />
-      <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-        <div className="flex flex-wrap gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-lg">⭐</span>
-            <span className="text-sm text-gray-700">Search Location</span>
-          </div>
-          {Object.keys(amenities).map(category => (
-            <div key={category} className="flex items-center gap-2">
-              <span className="text-lg">{categoryIcons[category] || '📍'}</span>
-              <span className="text-sm text-gray-700">
-                {category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
+    <div ref={mapRef} className="w-full h-96 rounded-lg border border-gray-200" />
   );
 }

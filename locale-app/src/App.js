@@ -162,6 +162,7 @@ export default function App() {
                 Location
               </label>
               <div className="flex gap-2">
+                <span className="text-2xl flex items-center">⭐</span>
                 <div className="relative flex-1">
                   <input
                     ref={locationInputRef}
@@ -197,16 +198,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Map */}
-            {report && filteredAmenities && (
-              <LocationMap
-                center={report.coordinates}
-                amenities={filteredAmenities}
-                radiusMiles={parseFloat(radius)}
-                controlRef={mapControlRef}
-              />
-            )}
-
             {/* Radius */}
             <div className="flex items-center gap-3">
               <label htmlFor="radius" className="text-sm font-medium text-gray-700 whitespace-nowrap">
@@ -225,6 +216,16 @@ export default function App() {
                 <option value="10">10 miles</option>
               </select>
             </div>
+
+            {/* Map */}
+            {report && filteredAmenities && (
+              <LocationMap
+                center={report.coordinates}
+                amenities={filteredAmenities}
+                radiusMiles={parseFloat(radius)}
+                controlRef={mapControlRef}
+              />
+            )}
 
             {/* Criteria Selection */}
             <CriteriaSelector

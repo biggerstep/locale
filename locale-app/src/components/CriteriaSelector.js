@@ -1,4 +1,5 @@
 import React from 'react';
+import { categoryIcons } from './map/mapConstants';
 
 export default function CriteriaSelector({
   availableCriteria,
@@ -16,7 +17,7 @@ export default function CriteriaSelector({
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-3">
-        Select amenities to evaluate
+        Amenities
       </label>
       <div className="grid grid-cols-2">
         {availableCriteria.map(criterion => {
@@ -47,6 +48,7 @@ export default function CriteriaSelector({
                     onChange={() => onToggleCriterion(criterion.key)}
                     className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 flex-shrink-0"
                   />
+                  <span className="text-base flex-shrink-0">{categoryIcons[criterion.key] || '📍'}</span>
                   <span className="text-sm text-gray-700">{criterion.label}</span>
                 </label>
                 <div className="flex items-center gap-1 ml-1 flex-shrink-0">

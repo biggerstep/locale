@@ -1,13 +1,12 @@
 import React from 'react';
+import { getTempColor } from '../../utils/temperatureUtils';
 
 function TempDot({ temp }) {
   if (temp == null) return <div className="w-5 h-5 rounded-full bg-gray-200 flex-shrink-0" />;
-  const normalized = Math.max(0, Math.min(1, (temp - 30) / 50));
-  const hue = (1 - normalized) * 240;
   return (
     <div
       className="w-5 h-5 rounded-full border border-gray-200 flex-shrink-0"
-      style={{ backgroundColor: `hsl(${hue}, 70%, 50%)` }}
+      style={{ backgroundColor: getTempColor(temp) }}
       title={`${Math.round(temp)}°F`}
     />
   );
@@ -19,8 +18,7 @@ const SEASONS = ['Spring', 'Summer', 'Fall', 'Winter'];
 
 export default function TemperatureRow({ annual, monthly, seasonal, view, onViewChange }) {
   const annualTemp = parseFloat(annual);
-  const annualNormalized = !isNaN(annualTemp) ? Math.max(0, Math.min(1, (annualTemp - 30) / 50)) : null;
-  const annualHue = annualNormalized != null ? (1 - annualNormalized) * 240 : null;
+  const annualColor = !isNaN(annualTemp) ? getTempColor(annualTemp) : null;
 
   return (
     <div className="py-3 border-b border-gray-100 last:border-b-0">
@@ -48,10 +46,10 @@ export default function TemperatureRow({ annual, monthly, seasonal, view, onView
       {/* Content */}
       {view === 'annual' && (
         <div className="flex items-center justify-end gap-2">
-          {annualHue != null && (
+          {annualColor && (
             <div
               className="w-6 h-6 rounded-full border-2 border-gray-200 flex-shrink-0"
-              style={{ backgroundColor: `hsl(${annualHue}, 70%, 50%)` }}
+              style={{ backgroundColor: annualColor }}
             />
           )}
           <span className="font-medium text-gray-900">{annual}</span>

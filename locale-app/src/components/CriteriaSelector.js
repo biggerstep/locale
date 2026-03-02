@@ -1,5 +1,6 @@
 import React from 'react';
 import { categoryIcons } from './map/mapConstants';
+import { sortPlaces, filterRestaurantsByRating } from '../utils/amenityUtils';
 
 export default function CriteriaSelector({
   availableCriteria,
@@ -23,20 +24,11 @@ export default function CriteriaSelector({
         {availableCriteria.map(criterion => {
           let amenityData = report?.amenities?.[criterion.key];
           if (amenityData && criterion.key === 'restaurants') {
-            const minRating = parseFloat(restaurantMinRating);
-            const filteredPlaces = amenityData.places.filter(place => {
-              if (minRating === 0) return true;
-              if (typeof place.rating !== 'number') return false;
-              return place.rating >= minRating;
-            });
-            amenityData = { count: filteredPlaces.length, places: filteredPlaces };
+            amenityData = filterRestaurantsByRating(amenityData, restaurantMinRating);
           }
           const isExpanded = expandedAmenities.has(criterion.key);
           const sortBy = sortOrders[criterion.key] || 'distance';
-          const sortedPlaces = [...(amenityData?.places || [])].sort((a, b) => {
-            if (sortBy === 'rating') return (b.rating || 0) - (a.rating || 0);
-            return (a.distance || 0) - (b.distance || 0);
-          });
+          const sortedPlaces = sortPlaces(amenityData?.places || [], sortBy);
 
           return (
             <div key={criterion.key} className="odd:pr-4 even:pl-4 even:border-l even:border-gray-200">

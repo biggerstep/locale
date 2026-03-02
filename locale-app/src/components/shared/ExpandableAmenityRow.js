@@ -1,13 +1,11 @@
 import React from 'react';
+import { sortPlaces } from '../../utils/amenityUtils';
 
 export default function ExpandableAmenityRow({ label, data, isExpanded, onToggle, sortBy, onSortChange }) {
   const count = data.count || 0;
   const places = data.places || [];
 
-  const sortedPlaces = [...places].sort((a, b) => {
-    if (sortBy === 'rating') return (b.rating || 0) - (a.rating || 0);
-    return (a.distance || 0) - (b.distance || 0);
-  });
+  const sortedPlaces = sortPlaces(places, sortBy);
 
   return (
     <div className="border border-gray-200 rounded-lg">

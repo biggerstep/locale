@@ -1,5 +1,6 @@
 import React from 'react';
 import ExpandableAmenityRow from './shared/ExpandableAmenityRow';
+import { formatLabel } from '../utils/amenityUtils';
 
 export default function CustomAmenities({
   customAmenities,
@@ -40,7 +41,7 @@ export default function CustomAmenities({
       {customResults.length > 0 && (
         <div className="space-y-2 mt-3">
           {customResults.map(([key, data]) => {
-            const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            const label = formatLabel(key);
             return (
               <ExpandableAmenityRow
                 key={key}

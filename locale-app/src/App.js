@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { fetchCriteria, evaluateLocation } from './api';
+import { filterRestaurantsByRating } from './utils/amenityUtils';
 import LocationMap from './components/map/LocationMap';
 import CriteriaSelector from './components/CriteriaSelector';
 import CustomAmenities from './components/CustomAmenities';
@@ -129,18 +130,10 @@ export default function App() {
     return Object.fromEntries(
       Object.entries(report.amenities)
         .filter(([key]) => selectedCriteria.has(key) || !standardCriteria.has(key))
-        .map(([key, data]) => {
-          if (key === 'restaurants') {
-            const minRating = parseFloat(restaurantMinRating);
-            const filteredPlaces = data.places.filter(place => {
-              if (minRating === 0) return true;
-              if (typeof place.rating !== 'number') return false;
-              return place.rating >= minRating;
-            });
-            return [key, { ...data, places: filteredPlaces }];
-          }
-          return [key, data];
-        })
+        .map(([key, data]) => [
+          key,
+          key === 'restaurants' ? filterRestaurantsByRating(data, restaurantMinRating) : data,
+        ])
     );
   })() : null;
 

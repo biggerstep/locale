@@ -19,6 +19,18 @@ TEXT_SEARCH_API_BASE = 'https://places.googleapis.com/v1/places:searchText'
 GEOCODING_API_BASE = 'https://maps.googleapis.com/maps/api/geocode/json'
 METEO_API_BASE = 'https://archive-api.open-meteo.com/v1/archive'
 
+# Shared request headers for Google Places API
+_PLACES_HEADERS = {
+    'Content-Type': 'application/json',
+    'X-Goog-Api-Key': GOOGLE_API_KEY,
+    'X-Goog-FieldMask': 'places.displayName,places.rating,places.location,places.types,places.googleMapsUri',
+}
+_AIRPORT_HEADERS = {
+    'Content-Type': 'application/json',
+    'X-Goog-Api-Key': GOOGLE_API_KEY,
+    'X-Goog-FieldMask': 'places.displayName,places.location',
+}
+
 # Available criteria with their Google Places types
 CRITERIA_MAP = {
     'grocery_stores': 'grocery_store',
@@ -34,6 +46,38 @@ CRITERIA_MAP = {
     'medical': ['hospital', 'pharmacy'],
     'gas_stations': 'gas_station',
 }
+
+
+def _calculate_distance_miles(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    """Distance in miles using Haversine approximation."""
+    lat_diff = abs(lat1 - lat2) * 69      # ~69 miles per degree latitude
+    lng_diff = abs(lng1 - lng2) * 54.6    # ~54.6 miles per degree longitude at mid-latitudes
+    return round((lat_diff**2 + lng_diff**2)**0.5, 2)
+
+
+def _build_place_list(raw_places: list, center_lat: float, center_lng: float,
+                      radius_miles: float = None) -> list:
+    """Convert raw Places API results to standardized dicts with distances.
+
+    If radius_miles is given, only places within that radius are included.
+    Results are sorted nearest first.
+    """
+    result = []
+    for place in raw_places:
+        place_lat = place.get('location', {}).get('latitude')
+        place_lng = place.get('location', {}).get('longitude')
+        if place_lat and place_lng:
+            distance = _calculate_distance_miles(center_lat, center_lng, place_lat, place_lng)
+            if radius_miles is None or distance <= radius_miles:
+                result.append({
+                    'name': place.get('displayName', {}).get('text', 'Unknown'),
+                    'distance': distance,
+                    'rating': place.get('rating'),
+                    'url': place.get('googleMapsUri', ''),
+                    'lat': place_lat,
+                    'lng': place_lng,
+                })
+    return sorted(result, key=lambda x: x['distance'])
 
 
 def geocode_location(location: str) -> Optional[Dict]:
@@ -68,12 +112,6 @@ def count_nearby_places(lat: float, lng: float, place_type,
     Returns count and detailed list with names and distances
     Uses POST request as required by new API
     """
-    headers = {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': GOOGLE_API_KEY,
-        'X-Goog-FieldMask': 'places.displayName,places.rating,places.location,places.types,places.googleMapsUri'
-    }
-
     types_list = [place_type] if isinstance(place_type, str) else place_type
 
     body = {
@@ -96,7 +134,7 @@ def count_nearby_places(lat: float, lng: float, place_type,
         body['rankPreference'] = 'POPULARITY'
 
     try:
-        response = requests.post(PLACES_API_BASE, headers=headers, json=body)
+        response = requests.post(PLACES_API_BASE, headers=_PLACES_HEADERS, json=body)
         response.raise_for_status()
         data = response.json()
 
@@ -130,32 +168,7 @@ def count_nearby_places(lat: float, lng: float, place_type,
         if 'restaurant' in types_list and min_rating:
             places = [p for p in places if p.get('rating', 0) >= min_rating]
 
-        # Calculate distances and build detailed list
-        detailed_places = []
-        for place in places:
-            place_lat = place.get('location', {}).get('latitude')
-            place_lng = place.get('location', {}).get('longitude')
-
-            if place_lat and place_lng:
-                # Calculate distance using Haversine formula approximation
-                lat_diff = abs(lat - place_lat) * 69  # ~69 miles per degree lat
-                lng_diff = abs(lng - place_lng) * 54.6  # ~54.6 miles per degree lng
-                distance = round((lat_diff**2 + lng_diff**2)**0.5, 2)
-
-                detailed_places.append({
-                    'name': place.get('displayName', {}).get('text', 'Unknown'),
-                    'distance': distance,
-                    'rating': place.get('rating'),
-                    'url': place.get('googleMapsUri', ''),
-                    'lat': place_lat,
-                    'lng': place_lng
-                })
-
-        # Sort by distance (closest first)
-        detailed_places.sort(key=lambda x: x['distance'])
-
-        # Return all places (up to API limit of 20)
-        # Frontend will display them in a scrollable list
+        detailed_places = _build_place_list(places, lat, lng)
         return {
             'count': len(places),
             'places': detailed_places
@@ -171,12 +184,6 @@ def search_by_text(lat: float, lng: float, query: str, radius_meters: int) -> di
     Uses Google Places Text Search API
     Returns count and detailed list with names and distances
     """
-    headers = {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': GOOGLE_API_KEY,
-        'X-Goog-FieldMask': 'places.displayName,places.rating,places.location,places.types,places.googleMapsUri'
-    }
-
     body = {
         'textQuery': query,
         'maxResultCount': 20,
@@ -193,38 +200,13 @@ def search_by_text(lat: float, lng: float, query: str, radius_meters: int) -> di
     }
 
     try:
-        response = requests.post(TEXT_SEARCH_API_BASE, headers=headers, json=body)
+        response = requests.post(TEXT_SEARCH_API_BASE, headers=_PLACES_HEADERS, json=body)
         response.raise_for_status()
         data = response.json()
 
         places = data.get('places', [])
-
-        # Calculate distances and build detailed list
-        detailed_places = []
-        for place in places:
-            place_lat = place.get('location', {}).get('latitude')
-            place_lng = place.get('location', {}).get('longitude')
-
-            if place_lat and place_lng:
-                # Calculate distance using Haversine formula approximation
-                lat_diff = abs(lat - place_lat) * 69  # ~69 miles per degree lat
-                lng_diff = abs(lng - place_lng) * 54.6  # ~54.6 miles per degree lng
-                distance = round((lat_diff**2 + lng_diff**2)**0.5, 2)
-
-                # Only include places within the radius
-                radius_miles = radius_meters / 1609.34
-                if distance <= radius_miles:
-                    detailed_places.append({
-                        'name': place.get('displayName', {}).get('text', 'Unknown'),
-                        'distance': distance,
-                        'rating': place.get('rating'),
-                        'url': place.get('googleMapsUri', ''),
-                        'lat': place_lat,
-                        'lng': place_lng
-                    })
-
-        detailed_places.sort(key=lambda x: x['distance'])
-
+        radius_miles = radius_meters / 1609.34
+        detailed_places = _build_place_list(places, lat, lng, radius_miles)
         return {
             'count': len(detailed_places),
             'places': detailed_places
@@ -324,12 +306,6 @@ def get_climate_data(lat: float, lng: float) -> Dict:
 
 def find_nearest_airport(lat: float, lng: float, radius_meters: int = 50000) -> Dict:
     """Find nearest airport (searches within ~31 miles - Google API max)"""
-    headers = {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': GOOGLE_API_KEY,
-        'X-Goog-FieldMask': 'places.displayName,places.location'
-    }
-    
     body = {
         'includedTypes': ['airport'],
         'maxResultCount': 5,
@@ -342,7 +318,7 @@ def find_nearest_airport(lat: float, lng: float, radius_meters: int = 50000) -> 
     }
     
     try:
-        response = requests.post(PLACES_API_BASE, headers=headers, json=body)
+        response = requests.post(PLACES_API_BASE, headers=_AIRPORT_HEADERS, json=body)
         response.raise_for_status()
         data = response.json()
         
@@ -355,10 +331,7 @@ def find_nearest_airport(lat: float, lng: float, radius_meters: int = 50000) -> 
         airport_lat = closest['location']['latitude']
         airport_lng = closest['location']['longitude']
         
-        # Calculate distance (simple Euclidean approximation)
-        lat_diff = abs(lat - airport_lat) * 69  # ~69 miles per degree lat
-        lng_diff = abs(lng - airport_lng) * 54.6  # ~54.6 miles per degree lng at mid-latitudes
-        distance = round((lat_diff**2 + lng_diff**2)**0.5, 1)
+        distance = _calculate_distance_miles(lat, lng, airport_lat, airport_lng)
         
         return {
             'name': closest['displayName']['text'],

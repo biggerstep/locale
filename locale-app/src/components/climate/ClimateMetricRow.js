@@ -1,4 +1,5 @@
 import React from 'react';
+import { getTempColor } from '../../utils/temperatureUtils';
 
 const US_AVG_TEMP = 52;    // °F
 const US_AVG_PRECIP = 38;  // inches/year
@@ -38,12 +39,10 @@ export default function ClimateMetricRow({ label, value, type }) {
     if (type === 'temperature') {
       const temp = parseFloat(value);
       if (isNaN(temp)) return null;
-      const normalized = Math.max(0, Math.min(1, (temp - 30) / 50));
-      const hue = (1 - normalized) * 240;
       return (
         <div
           className="w-6 h-6 rounded-full border-2 border-gray-200 flex-shrink-0"
-          style={{ backgroundColor: `hsl(${hue}, 70%, 50%)` }}
+          style={{ backgroundColor: getTempColor(temp) }}
           title={`${temp > US_AVG_TEMP ? 'Warmer' : 'Colder'} than US avg (${US_AVG_TEMP}°F)`}
         />
       );

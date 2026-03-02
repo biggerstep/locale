@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { API_BASE } from '../../api';
 import { categoryColors, categoryIcons } from './mapConstants';
+import { formatLabel } from '../../utils/amenityUtils';
 
 export default function LocationMap({ center, amenities, radiusMiles, controlRef }) {
   const mapRef = useRef(null);
@@ -132,7 +133,7 @@ export default function LocationMap({ center, amenities, radiusMiles, controlRef
     Object.entries(amenities).forEach(([category, data]) => {
       const icon = categoryIcons[category] || '📍';
       const color = categoryColors[category] || '#9CA3AF';
-      const categoryLabel = category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      const categoryLabel = formatLabel(category);
 
       data.places?.forEach(place => {
         if (place.lat && place.lng) {

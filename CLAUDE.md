@@ -179,12 +179,55 @@ locale/
 ├── requirements.txt        # Python dependencies
 ├── README.md               # User documentation
 ├── CLAUDE.md               # This file
-└── locale-app/             # Create React App
-    ├── public/
-    │   └── index.html      # Includes Tailwind CDN
-    └── src/
-        └── App.js          # Main React component
+└── locale-app/src/
+    ├── App.js              # Root component (state, layout only)
+    ├── api.js              # All fetch calls to backend
+    ├── utils/
+    │   ├── amenityUtils.js     # sortPlaces, filterRestaurantsByRating, formatLabel
+    │   └── temperatureUtils.js # getTempColor
+    └── components/
+        ├── LocationInput.js        # Location field with autocomplete dropdown
+        ├── CriteriaSelector.js     # Amenity checkboxes + inline results
+        ├── CustomAmenities.js      # Free-text custom amenity inputs
+        ├── ReportPanel.js          # Full report layout
+        ├── shared/
+        │   └── ExpandableAmenityRow.js  # Reusable expandable place list row
+        ├── climate/
+        │   ├── ClimateMetricRow.js      # Single climate stat row
+        │   └── TemperatureRow.js        # Temp row with Annual/Seasonal/Monthly toggle
+        └── map/
+            ├── LocationMap.js           # Google Maps with markers + InfoWindows
+            ├── mapConstants.js          # Amenity colors and icons
+            └── mapUtils.js             # SVG marker builder
 ```
+
+## Session State
+
+### What we accomplished
+- **Refactored App.js** (1095 lines → ~200 lines) into 10 focused component files under `locale-app/src/components/` and `utils/`
+- **Fixed amenity data quality issues**: Starbucks excluded from coffee shops (exclusion list pattern), `urgent_care_center` invalid type removed, sports/music/yoga schools excluded from Schools
+- **Renamed "Hospitals" → "Medical"** combining hospitals + pharmacies
+- **UI improvements**: amenity icons inline with checkboxes, star icon left of location input, radius selector repositioned, map legend removed, InfoWindow padding trimmed, amenity name truncation at 20 chars
+- **Extracted shared utilities**: `amenityUtils.js` (sortPlaces, filterRestaurantsByRating, formatLabel), `temperatureUtils.js` (getTempColor)
+- **Added location autocomplete**: `/api/autocomplete` endpoint (Google Places Autocomplete API), `LocationInput` component with debounced suggestions, keyboard nav (↑↓ Enter Esc), session tokens for cost efficiency
+- **Dropped auto-location detection**: navigator.geolocation blocked on HTTP (Tailscale); ip-api.com unreliable on cellular. Feature removed entirely.
+
+### Key decisions
+- **Autocomplete via backend proxy**: keeps API key server-side; uses same `GOOGLE_MAPS_API_KEY` (Places API already enabled for nearby search)
+- **Session tokens on autocomplete**: groups keystrokes into one billable session per selection (~$0.017/search vs per-keystroke billing)
+- **Google Places type exclusion lists**: rather than strict primary-type matching, use `any type in set` + exclude known false-positive primary types (e.g. `gas_station` for cafes, `sports_school` for schools)
+- **No auto-location**: HTTP (Tailscale URL) blocks geolocation in all modern browsers regardless of user gesture; IP fallback unreliable on cellular
+
+### Gotchas
+- Autocomplete requires Places API enabled in Google Cloud Console — it uses the same key as nearby search so likely already works, but verify if suggestions don't appear
+- The `GOOGLE_MAPS_API_KEY` in `.env` was previously exposed in chat — should be regenerated
+- `urgent_care_center` is NOT a valid Google Places API type (causes 400 error); medical = `['hospital', 'pharmacy']`
+- Schools use specific types `['primary_school', 'secondary_school', 'university', 'preschool']` — generic `school` type returns sports/music/yoga false positives
+
+### Next steps
+1. **Commit current changes** (autocomplete feature + location detection removal)
+2. **Verify autocomplete works** after `./stop_locale && ./start_locale` — test zip code input (e.g. "78701") and partial city names
+3. Consider adding `temperature toggle` (Annual/Seasonal/Monthly) — a plan file exists at `/Users/pete/.claude/plans/cosmic-gathering-fountain.md`
 
 ## Next Steps / Future Ideas
 

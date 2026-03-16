@@ -18,6 +18,7 @@ PLACES_API_BASE = 'https://places.googleapis.com/v1/places:searchNearby'
 TEXT_SEARCH_API_BASE = 'https://places.googleapis.com/v1/places:searchText'
 GEOCODING_API_BASE = 'https://maps.googleapis.com/maps/api/geocode/json'
 METEO_API_BASE = 'https://archive-api.open-meteo.com/v1/archive'
+AUTOCOMPLETE_API_BASE = 'https://maps.googleapis.com/maps/api/place/autocomplete/json'
 
 # Shared request headers for Google Places API
 _PLACES_HEADERS = {
@@ -80,6 +81,23 @@ def _build_place_list(raw_places: list, center_lat: float, center_lng: float,
     return sorted(result, key=lambda x: x['distance'])
 
 
+def autocomplete_places(input_text: str, session_token: str = None) -> list:
+    """Get address autocomplete suggestions using Google Places Autocomplete API"""
+    params = {'input': input_text, 'key': GOOGLE_API_KEY}
+    if session_token:
+        params['sessiontoken'] = session_token
+    try:
+        response = requests.get(AUTOCOMPLETE_API_BASE, params=params)
+        response.raise_for_status()
+        data = response.json()
+        if data.get('status') == 'OK':
+            return [p['description'] for p in data.get('predictions', [])]
+        return []
+    except Exception as e:
+        print(f"Autocomplete error: {e}")
+        return []
+
+
 def geocode_location(location: str) -> Optional[Dict]:
     """Convert location string to lat/lng using Google Geocoding API"""
     params = {
@@ -102,6 +120,24 @@ def geocode_location(location: str) -> Optional[Dict]:
         return None
     except Exception as e:
         print(f"Geocoding error: {e}")
+        return None
+
+
+def reverse_geocode(lat: float, lng: float) -> Optional[str]:
+    """Convert lat/lng coordinates to a formatted address string."""
+    params = {
+        'latlng': f'{lat},{lng}',
+        'key': GOOGLE_API_KEY
+    }
+    try:
+        response = requests.get(GEOCODING_API_BASE, params=params)
+        response.raise_for_status()
+        data = response.json()
+        if data['status'] == 'OK' and data['results']:
+            return data['results'][0]['formatted_address']
+        return None
+    except Exception as e:
+        print(f"Reverse geocoding error: {e}")
         return None
 
 

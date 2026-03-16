@@ -4,7 +4,7 @@ Provides REST endpoints for location evaluation
 """
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from locale_backend import evaluate_location, CRITERIA_MAP, GOOGLE_API_KEY
+from locale_backend import evaluate_location, reverse_geocode, autocomplete_places, CRITERIA_MAP, GOOGLE_API_KEY
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for frontend requests
@@ -34,6 +34,32 @@ def get_criteria():
         for key in CRITERIA_MAP.keys()
     ]
     return jsonify({'criteria': criteria_list})
+
+
+@app.route('/api/autocomplete', methods=['GET'])
+def autocomplete():
+    """Get address autocomplete suggestions"""
+    input_text = request.args.get('input', '').strip()
+    if not input_text or len(input_text) < 2:
+        return jsonify({'suggestions': []})
+    session_token = request.args.get('session_token')
+    suggestions = autocomplete_places(input_text, session_token)
+    return jsonify({'suggestions': suggestions})
+
+
+@app.route('/api/reverse-geocode', methods=['GET'])
+def reverse_geocode_endpoint():
+    """Convert lat/lng to a formatted address for current-location detection."""
+    try:
+        lat = float(request.args.get('lat'))
+        lng = float(request.args.get('lng'))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'lat and lng query parameters are required'}), 400
+
+    address = reverse_geocode(lat, lng)
+    if not address:
+        return jsonify({'error': 'Could not resolve coordinates to an address'}), 404
+    return jsonify({'address': address})
 
 
 @app.route('/api/evaluate', methods=['POST'])

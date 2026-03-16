@@ -2,12 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { fetchCriteria, evaluateLocation } from './api';
 import { filterRestaurantsByRating } from './utils/amenityUtils';
 import LocationMap from './components/map/LocationMap';
+import LocationInput from './components/LocationInput';
 import CriteriaSelector from './components/CriteriaSelector';
 import CustomAmenities from './components/CustomAmenities';
 import ReportPanel from './components/ReportPanel';
 
 export default function App() {
-  const [location, setLocation] = useState('8920 River Landing Way, Atlanta, GA 30350'); // TODO: Remove default for production
+  const [location, setLocation] = useState('');
   const [radius, setRadius] = useState('3');
   const [availableCriteria, setAvailableCriteria] = useState([]);
   const [selectedCriteria, setSelectedCriteria] = useState(new Set());
@@ -156,31 +157,11 @@ export default function App() {
               </label>
               <div className="flex gap-2">
                 <span className="text-2xl flex items-center">⭐</span>
-                <div className="relative flex-1">
-                  <input
-                    ref={locationInputRef}
-                    id="location"
-                    type="text"
-                    placeholder="e.g., 1234 Main St, Austin, TX or Portland, OR"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    className="w-full px-4 py-3 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition"
-                    required
-                  />
-                  {location && (
-                    <button
-                      type="button"
-                      onTouchEnd={(e) => { e.preventDefault(); setLocation(''); locationInputRef.current?.focus(); }}
-                      onMouseDown={(e) => { e.preventDefault(); setLocation(''); locationInputRef.current?.focus(); }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
-                      aria-label="Clear location"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
+                <LocationInput
+                  value={location}
+                  onChange={setLocation}
+                  inputRef={locationInputRef}
+                />
                 <button
                   type="submit"
                   disabled={!location || (selectedCriteria.size === 0 && customAmenities.every(a => !a.trim())) || loading}

@@ -211,23 +211,26 @@ locale/
 - **Extracted shared utilities**: `amenityUtils.js` (sortPlaces, filterRestaurantsByRating, formatLabel), `temperatureUtils.js` (getTempColor)
 - **Added location autocomplete**: `/api/autocomplete` endpoint (Google Places Autocomplete API), `LocationInput` component with debounced suggestions, keyboard nav (↑↓ Enter Esc), session tokens for cost efficiency
 - **Dropped auto-location detection**: navigator.geolocation blocked on HTTP (Tailscale); ip-api.com unreliable on cellular. Feature removed entirely.
+- **Fixed Tailscale connectivity**: Flask on port 5001 was blocked by macOS firewall when Python uprevved (3.14.0→3.14.3). Fixed by adding CRA proxy (`"proxy": "http://localhost:5001"` in package.json) so all API calls go through port 3000. Also disabled macOS app firewall (router NAT provides sufficient protection at home).
 
 ### Key decisions
 - **Autocomplete via backend proxy**: keeps API key server-side; uses same `GOOGLE_MAPS_API_KEY` (Places API already enabled for nearby search)
 - **Session tokens on autocomplete**: groups keystrokes into one billable session per selection (~$0.017/search vs per-keystroke billing)
 - **Google Places type exclusion lists**: rather than strict primary-type matching, use `any type in set` + exclude known false-positive primary types (e.g. `gas_station` for cafes, `sports_school` for schools)
 - **No auto-location**: HTTP (Tailscale URL) blocks geolocation in all modern browsers regardless of user gesture; IP fallback unreliable on cellular
+- **CRA proxy for API**: `api.js` now uses `API_BASE = '/api'` (relative URL); React dev server proxies to `localhost:5001`. Means Flask never needs firewall rules for external access.
+- **macOS firewall disabled**: home router NAT is sufficient protection; macOS app firewall was only causing pain as Python uprevved
 
 ### Gotchas
 - Autocomplete requires Places API enabled in Google Cloud Console — it uses the same key as nearby search so likely already works, but verify if suggestions don't appear
 - The `GOOGLE_MAPS_API_KEY` in `.env` was previously exposed in chat — should be regenerated
 - `urgent_care_center` is NOT a valid Google Places API type (causes 400 error); medical = `['hospital', 'pharmacy']`
 - Schools use specific types `['primary_school', 'secondary_school', 'university', 'preschool']` — generic `school` type returns sports/music/yoga false positives
+- If macOS firewall ever gets re-enabled, run: `sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off`
 
 ### Next steps
-1. **Commit current changes** (autocomplete feature + location detection removal)
-2. **Verify autocomplete works** after `./stop_locale && ./start_locale` — test zip code input (e.g. "78701") and partial city names
-3. Consider adding `temperature toggle` (Annual/Seasonal/Monthly) — a plan file exists at `/Users/pete/.claude/plans/cosmic-gathering-fountain.md`
+1. **Verify autocomplete works** — test zip code input (e.g. "78701") and partial city/address names from iPad
+2. Consider implementing **temperature toggle** (Annual/Seasonal/Monthly) — plan exists at `/Users/pete/.claude/plans/cosmic-gathering-fountain.md`
 
 ## Next Steps / Future Ideas
 

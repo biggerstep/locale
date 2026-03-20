@@ -1,6 +1,4 @@
-export const API_BASE = window.location.hostname === 'localhost'
-  ? 'http://localhost:5001/api'
-  : `http://${window.location.hostname}:5001/api`;
+export const API_BASE = '/api';
 
 export async function fetchReverseGeocode(lat, lng) {
   const res = await fetch(`${API_BASE}/reverse-geocode?lat=${lat}&lng=${lng}`);

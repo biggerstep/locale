@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { fetchAutocomplete } from '../api';
 
-export default function LocationInput({ value, onChange, inputRef }) {
+export default function LocationInput({ value, onChange, inputRef, onSubmit, suppressRef }) {
   const [suggestions, setSuggestions] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const containerRef = useRef(null);
   const debounceRef = useRef(null);
   const sessionTokenRef = useRef(Math.random().toString(36).slice(2));
+  const justSelectedRef = useRef(false);
 
   // Fetch suggestions with debounce
   useEffect(() => {
@@ -15,6 +16,11 @@ export default function LocationInput({ value, onChange, inputRef }) {
     if (!value || value.length < 2) {
       setSuggestions([]);
       setShowDropdown(false);
+      return;
+    }
+    if (justSelectedRef.current || suppressRef?.current) {
+      justSelectedRef.current = false;
+      if (suppressRef) suppressRef.current = false;
       return;
     }
     debounceRef.current = setTimeout(async () => {
@@ -38,11 +44,11 @@ export default function LocationInput({ value, onChange, inputRef }) {
   }, []);
 
   const selectSuggestion = (suggestion) => {
+    justSelectedRef.current = true;
     onChange(suggestion);
     setSuggestions([]);
     setShowDropdown(false);
     setActiveIndex(-1);
-    // Reset session token after selection (new session for next search)
     sessionTokenRef.current = Math.random().toString(36).slice(2);
   };
 
@@ -56,7 +62,9 @@ export default function LocationInput({ value, onChange, inputRef }) {
       setActiveIndex(i => Math.max(i - 1, -1));
     } else if (e.key === 'Enter' && activeIndex >= 0) {
       e.preventDefault();
-      selectSuggestion(suggestions[activeIndex]);
+      const selected = suggestions[activeIndex];
+      selectSuggestion(selected);
+      if (onSubmit) onSubmit(selected);
     } else if (e.key === 'Escape') {
       setShowDropdown(false);
       setActiveIndex(-1);

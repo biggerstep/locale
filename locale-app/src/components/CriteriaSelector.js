@@ -6,6 +6,8 @@ export default function CriteriaSelector({
   availableCriteria,
   selectedCriteria,
   onToggleCriterion,
+  onSelectAll,
+  onDeselectAll,
   report,
   restaurantMinRating,
   onRestaurantMinRatingChange,
@@ -15,11 +17,22 @@ export default function CriteriaSelector({
   onSortChange,
   mapControlRef,
 }) {
+  const allSelected = availableCriteria.length > 0 && selectedCriteria.size === availableCriteria.length;
+
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-3">
-        Amenities
-      </label>
+      <div className="flex items-center justify-between mb-3">
+        <label className="block text-sm font-medium text-gray-700">
+          Amenities
+        </label>
+        <button
+          type="button"
+          onClick={allSelected ? onDeselectAll : onSelectAll}
+          className="text-xs text-blue-600 hover:text-blue-800 transition"
+        >
+          {allSelected ? 'Deselect All' : 'Select All'}
+        </button>
+      </div>
       <div className="grid grid-cols-2">
         {availableCriteria.map(criterion => {
           let amenityData = report?.amenities?.[criterion.key];

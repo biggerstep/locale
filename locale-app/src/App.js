@@ -23,6 +23,8 @@ export default function App() {
   const [tempView, setTempView] = useState('annual');
   const locationInputRef = useRef(null);
   const mapControlRef = useRef(null);
+  const mapCenterRef = useRef(null);
+  const locationSuppressRef = useRef(false);
 
   // Load available criteria on mount
   useEffect(() => {
@@ -37,7 +39,7 @@ export default function App() {
             setSelectedCriteria(new Set(data.criteria.map(c => c.key)));
           }
         } else {
-          setSelectedCriteria(new Set(data.criteria.map(c => c.key)));
+          setSelectedCriteria(new Set(['grocery_stores']));
         }
       })
       .catch(err => console.error('Failed to load criteria:', err));
@@ -85,6 +87,15 @@ export default function App() {
     setSelectedCriteria(newSelected);
   };
 
+  const handleSelectAllCriteria = () => {
+    const allKeys = availableCriteria.map(c => c.key);
+    setSelectedCriteria(new Set(allKeys));
+  };
+
+  const handleDeselectAllCriteria = () => {
+    setSelectedCriteria(new Set());
+  };
+
   const toggleAmenity = (key) => {
     const newExpanded = new Set(expandedAmenities);
     newExpanded.has(key) ? newExpanded.delete(key) : newExpanded.add(key);
@@ -107,11 +118,12 @@ export default function App() {
     setSortOrders(prev => ({ ...prev, [key]: order }));
   };
 
-  const performSearch = async () => {
+  const performSearch = async (locationOverride) => {
+    const searchLocation = locationOverride ?? location;
     setLoading(true);
     setError(null);
     try {
-      const data = await evaluateLocation({ location, radius, selectedCriteria, customAmenities });
+      const data = await evaluateLocation({ location: searchLocation, radius, selectedCriteria, customAmenities });
       setReport(data);
     } catch (err) {
       setError(err.message || 'Network error - is the API server running?');
@@ -123,6 +135,22 @@ export default function App() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     await performSearch();
+  };
+
+  const handleSearchHere = async () => {
+    if (!mapCenterRef.current) return;
+    const center = mapCenterRef.current();
+    if (!center) return;
+    const lat = center.lat();
+    const lng = center.lng();
+    setReport(null);
+    const res = await fetch(`/api/reverse-geocode?lat=${lat}&lng=${lng}`);
+    const data = await res.json();
+    if (data.address) {
+      locationSuppressRef.current = true;
+      setLocation(data.address);
+      await performSearch(data.address);
+    }
   };
 
   // Build filtered amenities for map display
@@ -161,6 +189,8 @@ export default function App() {
                   value={location}
                   onChange={setLocation}
                   inputRef={locationInputRef}
+                  onSubmit={performSearch}
+                  suppressRef={locationSuppressRef}
                 />
                 <button
                   type="submit"
@@ -173,32 +203,47 @@ export default function App() {
             </div>
 
             {/* Radius */}
-            <div className="flex items-center gap-3">
-              <label htmlFor="radius" className="text-sm font-medium text-gray-700 whitespace-nowrap">
-                Search Radius
-              </label>
-              <select
-                id="radius"
-                value={radius}
-                onChange={(e) => setRadius(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm"
-              >
-                <option value="1">1 mile</option>
-                <option value="2">2 miles</option>
-                <option value="3">3 miles</option>
-                <option value="5">5 miles</option>
-                <option value="10">10 miles</option>
-              </select>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <label htmlFor="radius" className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                  Search Radius
+                </label>
+                <select
+                  id="radius"
+                  value={radius}
+                  onChange={(e) => setRadius(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm"
+                >
+                  <option value="1">1 mile</option>
+                  <option value="2">2 miles</option>
+                  <option value="3">3 miles</option>
+                  <option value="5">5 miles</option>
+                  <option value="10">10 miles</option>
+                </select>
+              </div>
+              {report && (
+                <button
+                  type="button"
+                  onClick={handleSearchHere}
+                  disabled={!location || loading}
+                  className="text-sm text-blue-600 hover:text-blue-800 disabled:text-gray-400 disabled:cursor-not-allowed transition font-medium"
+                >
+                  {loading ? 'Searching...' : 'Search Here'}
+                </button>
+              )}
             </div>
 
             {/* Map */}
             {report && filteredAmenities && (
-              <LocationMap
-                center={report.coordinates}
-                amenities={filteredAmenities}
-                radiusMiles={parseFloat(radius)}
-                controlRef={mapControlRef}
-              />
+              <div>
+                <LocationMap
+                  center={report.coordinates}
+                  amenities={filteredAmenities}
+                  radiusMiles={parseFloat(radius)}
+                  controlRef={mapControlRef}
+                  getCenterRef={mapCenterRef}
+                />
+              </div>
             )}
 
             {/* Criteria Selection */}
@@ -206,6 +251,8 @@ export default function App() {
               availableCriteria={availableCriteria}
               selectedCriteria={selectedCriteria}
               onToggleCriterion={toggleCriterion}
+              onSelectAll={handleSelectAllCriteria}
+              onDeselectAll={handleDeselectAllCriteria}
               report={report}
               restaurantMinRating={restaurantMinRating}
               onRestaurantMinRatingChange={setRestaurantMinRating}

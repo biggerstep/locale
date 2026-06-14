@@ -3,7 +3,7 @@ import { API_BASE } from '../../api';
 import { categoryColors, categoryIcons } from './mapConstants';
 import { formatLabel } from '../../utils/amenityUtils';
 
-export default function LocationMap({ center, amenities, radiusMiles, controlRef }) {
+export default function LocationMap({ center, amenities, radiusMiles, controlRef, getCenterRef }) {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markersRef = useRef([]);
@@ -70,6 +70,8 @@ export default function LocationMap({ center, amenities, radiusMiles, controlRef
     });
 
     mapInstanceRef.current = map;
+
+    if (getCenterRef) getCenterRef.current = () => mapInstanceRef.current?.getCenter();
 
     const style = document.createElement('style');
     style.textContent = `

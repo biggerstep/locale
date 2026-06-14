@@ -27,7 +27,7 @@ sleep 2
 # Start React dev server
 echo -e "\n${GREEN}[2/2] Starting React dev server on port 3000...${NC}"
 cd locale-app
-HOST=0.0.0.0 npm start > /tmp/locale_react.log 2>&1 &
+HOST=0.0.0.0 DANGEROUSLY_DISABLE_HOST_CHECK=true npm start > /tmp/locale_react.log 2>&1 &
 REACT_PID=$!
 echo $REACT_PID > /tmp/locale_react.pid
 echo "  ✓ React server running (PID: $REACT_PID)"

@@ -204,33 +204,37 @@ locale/
 ## Session State
 
 ### What we accomplished
-- **Refactored App.js** (1095 lines → ~200 lines) into 10 focused component files under `locale-app/src/components/` and `utils/`
-- **Fixed amenity data quality issues**: Starbucks excluded from coffee shops (exclusion list pattern), `urgent_care_center` invalid type removed, sports/music/yoga schools excluded from Schools
-- **Renamed "Hospitals" → "Medical"** combining hospitals + pharmacies
-- **UI improvements**: amenity icons inline with checkboxes, star icon left of location input, radius selector repositioned, map legend removed, InfoWindow padding trimmed, amenity name truncation at 20 chars
-- **Extracted shared utilities**: `amenityUtils.js` (sortPlaces, filterRestaurantsByRating, formatLabel), `temperatureUtils.js` (getTempColor)
-- **Added location autocomplete**: `/api/autocomplete` endpoint (Google Places Autocomplete API), `LocationInput` component with debounced suggestions, keyboard nav (↑↓ Enter Esc), session tokens for cost efficiency
-- **Dropped auto-location detection**: navigator.geolocation blocked on HTTP (Tailscale); ip-api.com unreliable on cellular. Feature removed entirely.
-- **Fixed Tailscale connectivity**: Flask on port 5001 was blocked by macOS firewall when Python uprevved (3.14.0→3.14.3). Fixed by adding CRA proxy (`"proxy": "http://localhost:5001"` in package.json) so all API calls go through port 3000. Also disabled macOS app firewall (router NAT provides sufficient protection at home).
+- **Auto-start on reboot**: created launchd agents `com.pete.locale-api` and `com.pete.locale-react` in `~/Library/LaunchAgents/` — both servers start automatically with `KeepAlive=true`
+- **UX improvements** (committed `c165957`):
+  - Default to grocery stores only on first load (was: all criteria selected)
+  - Select All / Deselect All toggle in CriteriaSelector
+  - "Search Here" button on Search Radius row (right-justified) — re-evaluates the current map center via reverse geocode
+  - Autocomplete Enter key now auto-submits the search
+  - Fixed dropdown staying open after suggestion selection or Search Here
+  - Old map clears immediately when Search Here is triggered
+- **Komoot-inspired styling** (`bg-stone-100` warm off-white background, white content cards)
+- **Custom domain access**: `dev.peterbriggs.info` A record → Tailscale IP `100.125.206.126`; fixed CRA "Invalid Host Header" via `DANGEROUSLY_DISABLE_HOST_CHECK=true` in `start_locale` and launchd plist
 
-### Key decisions
-- **Autocomplete via backend proxy**: keeps API key server-side; uses same `GOOGLE_MAPS_API_KEY` (Places API already enabled for nearby search)
-- **Session tokens on autocomplete**: groups keystrokes into one billable session per selection (~$0.017/search vs per-keystroke billing)
-- **Google Places type exclusion lists**: rather than strict primary-type matching, use `any type in set` + exclude known false-positive primary types (e.g. `gas_station` for cafes, `sports_school` for schools)
-- **No auto-location**: HTTP (Tailscale URL) blocks geolocation in all modern browsers regardless of user gesture; IP fallback unreliable on cellular
-- **CRA proxy for API**: `api.js` now uses `API_BASE = '/api'` (relative URL); React dev server proxies to `localhost:5001`. Means Flask never needs firewall rules for external access.
-- **macOS firewall disabled**: home router NAT is sufficient protection; macOS app firewall was only causing pain as Python uprevved
+### What's currently in progress
+Nothing — all changes committed and working.
 
-### Gotchas
-- Autocomplete requires Places API enabled in Google Cloud Console — it uses the same key as nearby search so likely already works, but verify if suggestions don't appear
-- The `GOOGLE_MAPS_API_KEY` in `.env` was previously exposed in chat — should be regenerated
-- `urgent_care_center` is NOT a valid Google Places API type (causes 400 error); medical = `['hospital', 'pharmacy']`
-- Schools use specific types `['primary_school', 'secondary_school', 'university', 'preschool']` — generic `school` type returns sports/music/yoga false positives
-- If macOS firewall ever gets re-enabled, run: `sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off`
+### Key decisions made
+- **launchd for auto-start**: plist files in `~/Library/LaunchAgents/` (not in git — system config). Flask uses `venv/bin/python3` directly; React uses `npm start` with `HOST=0.0.0.0` and `DANGEROUSLY_DISABLE_HOST_CHECK=true`
+- **Search Here via reverse geocode**: gets map center lat/lng → `/api/reverse-geocode` → address string → `performSearch()`. Clears report before fetch to avoid stale map flash
+- **Dropdown suppression**: `justSelectedRef` in `LocationInput` prevents autocomplete re-triggering after selection; `locationSuppressRef` (passed as `suppressRef` prop) prevents it after Search Here sets location
+- **`locale-app/.env` is gitignored**: `DANGEROUSLY_DISABLE_HOST_CHECK` is instead baked into `start_locale` script and launchd plist so it persists without a committed .env
 
 ### Next steps
-1. **Verify autocomplete works** — test zip code input (e.g. "78701") and partial city/address names from iPad
-2. Consider implementing **temperature toggle** (Annual/Seasonal/Monthly) — plan exists at `/Users/pete/.claude/plans/cosmic-gathering-fountain.md`
+1. **Verify locale restarts after reboot** — confirm both servers come up automatically on next pgb-mm reboot
+2. **Continue Komoot-inspired styling** — consider orange accent color, bolder typography, pill-style buttons
+3. **No version tags yet** — consider tagging current state as v1.0
+
+### Gotchas / context
+- `GOOGLE_MAPS_API_KEY` was previously exposed in chat — should be regenerated in Google Cloud Console
+- launchd plist files are in `~/Library/LaunchAgents/` (not in the repo); if mm is re-imaged they'd need to be recreated
+- `urgent_care_center` is NOT a valid Google Places API type; medical = `['hospital', 'pharmacy']`
+- If macOS firewall ever gets re-enabled: `sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off`
+- Access from iPhone/iPad: `http://dev.peterbriggs.info:3000` (requires Tailscale connected)
 
 ## Next Steps / Future Ideas
 

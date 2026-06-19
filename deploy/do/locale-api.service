@@ -1,0 +1,16 @@
+[Unit]
+Description=Locale Flask API Server
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/locale
+Environment="PATH=/var/www/locale/venv/bin"
+ExecStart=/var/www/locale/venv/bin/python3 /var/www/locale/api_server.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

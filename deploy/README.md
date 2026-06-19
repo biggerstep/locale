@@ -37,7 +37,7 @@ sudo systemctl start locale-api
 
 **Install nginx config:**
 ```bash
-sudo cp deploy/do/nginx-peterbriggs.ai.conf /etc/nginx/sites-available/peterbriggs.ai
-sudo ln -s /etc/nginx/sites-available/peterbriggs.ai /etc/nginx/sites-enabled/
+sudo cp deploy/do/nginx-locale.peterbriggs.info.conf /etc/nginx/sites-available/locale.peterbriggs.info
+sudo ln -s /etc/nginx/sites-available/locale.peterbriggs.info /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
 ```

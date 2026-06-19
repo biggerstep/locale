@@ -2,6 +2,22 @@
 
 This is a location evaluation application that helps users assess locations based on amenities, climate, and transportation access.
 
+## Opening Every Session
+When Pete opens a session:
+1. Read the `## Session State` section in this CLAUDE.md
+2. Summarize briefly: what was worked on, what's in progress, what's next
+3. Ask Pete what he wants to work on
+
+## Tasks
+
+Tasks are assigned by petebot and surfaced automatically at session start.
+
+- **Task file location**: `~/petebot/tasks/locale.md`
+- When a task is complete, move it to the completed folder:
+  ```bash
+  mv ~/petebot/tasks/locale.md ~/petebot/tasks/completed/locale-$(date +%Y-%m-%d).md
+  ```
+
 ## Architecture
 
 ```

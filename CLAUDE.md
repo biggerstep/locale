@@ -220,34 +220,31 @@ locale/
 ## Session State
 
 ### What we accomplished
-- **Auto-start on reboot**: created launchd agents `com.pete.locale-api` and `com.pete.locale-react` in `~/Library/LaunchAgents/` — both servers start automatically with `KeepAlive=true`
-- **UX improvements** (committed `c165957`):
-  - Default to grocery stores only on first load (was: all criteria selected)
-  - Select All / Deselect All toggle in CriteriaSelector
-  - "Search Here" button on Search Radius row (right-justified) — re-evaluates the current map center via reverse geocode
-  - Autocomplete Enter key now auto-submits the search
-  - Fixed dropdown staying open after suggestion selection or Search Here
-  - Old map clears immediately when Search Here is triggered
-- **Komoot-inspired styling** (`bg-stone-100` warm off-white background, white content cards)
-- **Custom domain access**: `dev.peterbriggs.info` A record → Tailscale IP `100.125.206.126`; fixed CRA "Invalid Host Header" via `DANGEROUSLY_DISABLE_HOST_CHECK=true` in `start_locale` and launchd plist
+- **Repo moved** to `~/code/locale`; updated launchd plists and reloaded agents
+- **deploy/ folder added**: launchd plists (macOS) and systemd + nginx configs (DO) now versioned in the repo
+- **Deployment target decided**: `locale.peterbriggs.info` (subdomain of existing droplet, serves React at domain root — no subpath prefix)
+- `DEPLOYMENT.md` rewritten to match
 
 ### What's currently in progress
 Nothing — all changes committed and working.
 
 ### Key decisions made
-- **launchd for auto-start**: plist files in `~/Library/LaunchAgents/` (not in git — system config). Flask uses `venv/bin/python3` directly; React uses `npm start` with `HOST=0.0.0.0` and `DANGEROUSLY_DISABLE_HOST_CHECK=true`
-- **Search Here via reverse geocode**: gets map center lat/lng → `/api/reverse-geocode` → address string → `performSearch()`. Clears report before fetch to avoid stale map flash
-- **Dropdown suppression**: `justSelectedRef` in `LocationInput` prevents autocomplete re-triggering after selection; `locationSuppressRef` (passed as `suppressRef` prop) prevents it after Search Here sets location
-- **`locale-app/.env` is gitignored**: `DANGEROUSLY_DISABLE_HOST_CHECK` is instead baked into `start_locale` script and launchd plist so it persists without a committed .env
+- **launchd plists now in repo** at `deploy/macos/` — copy to `~/Library/LaunchAgents/` to install; paths hard-coded to `/Users/pete/code/locale`
+- **locale.peterbriggs.info over peterbriggs.ai**: `.ai` TLD doesn't fit a non-AI tool; subdomain avoids React path-prefix headaches
+- **DO deployment**: `deploy/do/` has `locale-api.service` (systemd) and `nginx-locale.peterbriggs.info.conf`; app lives at `/var/www/locale`, runs as `www-data`
 
 ### Next steps
-1. **Verify locale restarts after reboot** — confirm both servers come up automatically on next pgb-mm reboot
-2. **Continue Komoot-inspired styling** — consider orange accent color, bolder typography, pill-style buttons
+1. **Deploy to DigitalOcean** — TOP PRIORITY
+   - Add DNS A record: `locale` → droplet IP
+   - SSH in, clone repo to `/var/www/locale`, set up venv, build React
+   - Install `deploy/do/locale-api.service` and `deploy/do/nginx-locale.peterbriggs.info.conf`
+   - Run Certbot for SSL
+   - Full steps in `DEPLOYMENT.md`
+2. **Continue Komoot-inspired styling** — orange accent color, bolder typography, pill-style buttons
 3. **No version tags yet** — consider tagging current state as v1.0
 
 ### Gotchas / context
-- `GOOGLE_MAPS_API_KEY` was previously exposed in chat — should be regenerated in Google Cloud Console
-- launchd plist files are in `~/Library/LaunchAgents/` (not in the repo); if mm is re-imaged they'd need to be recreated
+- `GOOGLE_MAPS_API_KEY` was previously exposed in chat — should be regenerated in Google Cloud Console before DO deploy
 - `urgent_care_center` is NOT a valid Google Places API type; medical = `['hospital', 'pharmacy']`
 - If macOS firewall ever gets re-enabled: `sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off`
 - Access from iPhone/iPad: `http://dev.peterbriggs.info:3000` (requires Tailscale connected)

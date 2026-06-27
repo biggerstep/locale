@@ -8,6 +8,8 @@ When Pete opens a session:
 2. Summarize briefly: what was worked on, what's in progress, what's next
 3. Ask Pete what he wants to work on
 
+After each session, update `### Next steps` — it's the canonical to-do list for this project. Remove items as you complete them; add new ones as they come up.
+
 ## Tasks
 
 Tasks are assigned by petebot and surfaced automatically at session start.
@@ -251,13 +253,17 @@ Nothing — all changes committed and working.
 
 ## Next Steps / Future Ideas
 
-- [ ] Add caching (Redis) to reduce API costs
+- [ ] Add humidity to climate data (Open-Meteo likely has it; quick addition)
+- [ ] Dealbreaker filters — flag a result red if a criterion isn't met (e.g. "must have grocery store within 1 mile")
 - [ ] Save/compare multiple locations
-- [ ] Reverse search: find locations matching criteria
-- [ ] Map view with Mapbox/Leaflet
+- [ ] Add caching (Redis) to reduce API costs
 - [ ] More criteria (libraries, entertainment, etc.)
 - [ ] Customize detail limit (currently hardcoded to 5)
 - [ ] Add ratings/reviews to place details
+
+## Maybe Someday
+
+- Reverse search: find locations that meet your criteria (inverse of current workflow — complex, needs different API approach)
 
 ## API Costs
 
